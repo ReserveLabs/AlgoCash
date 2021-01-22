@@ -1,0 +1,2 @@
+# AlgoCash
+An algorithmic stablecoin
