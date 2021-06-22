@@ -17,7 +17,7 @@
 use ink_lang as ink;
 
 #[ink::contract]
-mod Share {
+mod asset {
     #[cfg(not(feature = "ink-as-dependency"))]
     use ink_storage::{
         collections::HashMap as StorageHashMap,
@@ -26,7 +26,7 @@ mod Share {
 
     /// A simple ERC-20 contract.
     #[ink(storage)]
-    pub struct Share {
+    pub struct Asset {
         /// Total token supply.
         total_supply: Lazy<Balance>,
         /// Mapping from owner to number of owned token.
@@ -76,7 +76,7 @@ mod Share {
     /// The ERC-20 result type.
     pub type Result<T> = core::result::Result<T, Error>;
 
-    impl Share {
+    impl Asset {
         /// Creates a new ERC-20 contract with the specified initial supply.
         #[ink(constructor)]
         pub fn new(initial_supply: Balance) -> Self {
@@ -315,7 +315,7 @@ mod Share {
             Clear,
         };
 
-        type Event = <Share as ::ink_lang::BaseEvent>::Type;
+        type Event = <Asset as ::ink_lang::BaseEvent>::Type;
 
         use ink_lang as ink;
 
@@ -335,8 +335,8 @@ mod Share {
                 panic!("encountered unexpected event kind: expected a Transfer event")
             }
             fn encoded_into_hash<T>(entity: &T) -> Hash
-            where
-                T: scale::Encode,
+                where
+                    T: scale::Encode,
             {
                 let mut result = Hash::clear();
                 let len_result = result.as_ref().len();
@@ -355,24 +355,24 @@ mod Share {
             }
             let expected_topics = vec![
                 encoded_into_hash(&PrefixedValue {
-                    value: b"Erc20::Transfer",
+                    value: b"asset::Transfer",
                     prefix: b"",
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"Erc20::Transfer::from",
+                    prefix: b"asset::Transfer::from",
                     value: &expected_from,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"Erc20::Transfer::to",
+                    prefix: b"asset::Transfer::to",
                     value: &expected_to,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"Erc20::Transfer::value",
+                    prefix: b"asset::Transfer::value",
                     value: &expected_value,
                 }),
             ];
             for (n, (actual_topic, expected_topic)) in
-                event.topics.iter().zip(expected_topics).enumerate()
+            event.topics.iter().zip(expected_topics).enumerate()
             {
                 let topic = actual_topic
                     .decode::<Hash>()
@@ -385,7 +385,7 @@ mod Share {
         #[ink::test]
         fn new_works() {
             // Constructor works.
-            let _erc20 = Share::new(100);
+            let _erc20 = Asset::new(100);
 
             // Transfer event triggered during initial construction.
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -403,7 +403,7 @@ mod Share {
         #[ink::test]
         fn total_supply_works() {
             // Constructor works.
-            let erc20 = Erc20::new(100);
+            let erc20 = Asset::new(100);
             // Transfer event triggered during initial construction.
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
             assert_transfer_event(
@@ -420,7 +420,7 @@ mod Share {
         #[ink::test]
         fn balance_of_works() {
             // Constructor works
-            let erc20 = Erc20::new(100);
+            let erc20 = Asset::new(100);
             // Transfer event triggered during initial construction
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
             assert_transfer_event(
@@ -441,7 +441,7 @@ mod Share {
         #[ink::test]
         fn transfer_works() {
             // Constructor works.
-            let mut erc20 = Erc20::new(100);
+            let mut erc20 = Asset::new(100);
             // Transfer event triggered during initial construction.
             let accounts =
                 ink_env::test::default_accounts::<ink_env::DefaultEnvironment>()
@@ -474,7 +474,7 @@ mod Share {
         #[ink::test]
         fn invalid_transfer_should_fail() {
             // Constructor works.
-            let mut erc20 = Erc20::new(100);
+            let mut erc20 = Asset::new(100);
             let accounts =
                 ink_env::test::default_accounts::<ink_env::DefaultEnvironment>()
                     .expect("Cannot get accounts");
@@ -520,7 +520,7 @@ mod Share {
         #[ink::test]
         fn transfer_from_works() {
             // Constructor works.
-            let mut erc20 = Erc20::new(100);
+            let mut erc20 = Asset::new(100);
             // Transfer event triggered during initial construction.
             let accounts =
                 ink_env::test::default_accounts::<ink_env::DefaultEnvironment>()
@@ -581,7 +581,7 @@ mod Share {
 
         #[ink::test]
         fn allowance_must_not_change_on_failed_transfer() {
-            let mut erc20 = Erc20::new(100);
+            let mut erc20 = Asset::new(100);
             let accounts =
                 ink_env::test::default_accounts::<ink_env::DefaultEnvironment>()
                     .expect("Cannot get accounts");
@@ -633,8 +633,8 @@ mod Share {
     }
 
     impl<X> scale::Encode for PrefixedValue<'_, '_, X>
-    where
-        X: scale::Encode,
+        where
+            X: scale::Encode,
     {
         #[inline]
         fn size_hint(&self) -> usize {
