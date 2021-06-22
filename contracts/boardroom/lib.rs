@@ -3,32 +3,22 @@
 use ink_lang as ink;
 
 #[ink::contract]
-mod Boardroom {
+mod boardroom {
 
     /// Defines the storage of your contract.
     /// Add new fields to the below struct in order
     /// to add new static storage fields to your contract.
     #[ink(storage)]
     pub struct Boardroom {
-        /// Total token supply.
-        total_supply: Lazy<Balance>,
-        /// Mapping from owner to number of owned token.
-        balances: StorageHashMap<AccountId, Balance>,
-
-        pub cash: AccountId,
-
-        pub share: AccountId,
+        /// Stores a single `bool` value on the storage.
+        value: bool,
     }
 
     impl Boardroom {
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
-        pub fn new(cash_account_id: AccountId, share_account_id: AccountId) -> Self {
-            let mut instance = Self { 
-                cash: cash_account_id,
-                share: share_account_id,
-            }
-            instance
+        pub fn new(init_value: bool) -> Self {
+            Self { value: init_value }
         }
 
         /// Constructor that initializes the `bool` value to `false`.
@@ -65,17 +55,17 @@ mod Boardroom {
         /// We test if the default constructor does its job.
         #[test]
         fn default_works() {
-            let Boardroom = Boardroom::default();
-            assert_eq!(Boardroom.get(), false);
+            let Oracle = Boardroom::default();
+            assert_eq!(Oracle.get(), false);
         }
 
         /// We test a simple use case of our contract.
         #[test]
         fn it_works() {
-            let mut Boardroom = Boardroom::new(false);
-            assert_eq!(Boardroom.get(), false);
-            Boardroom.flip();
-            assert_eq!(Boardroom.get(), true);
+            let mut Oracle = Boardroom::new(false);
+            assert_eq!(Oracle.get(), false);
+            Oracle.flip();
+            assert_eq!(Oracle.get(), true);
         }
     }
 }

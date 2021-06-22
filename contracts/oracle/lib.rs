@@ -3,18 +3,18 @@
 use ink_lang as ink;
 
 #[ink::contract]
-mod Treasure {
+mod oracle {
 
     /// Defines the storage of your contract.
     /// Add new fields to the below struct in order
     /// to add new static storage fields to your contract.
     #[ink(storage)]
-    pub struct Treasure {
+    pub struct Oracle {
         /// Stores a single `bool` value on the storage.
         value: bool,
     }
 
-    impl Treasure {
+    impl Oracle {
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
         pub fn new(init_value: bool) -> Self {
@@ -55,17 +55,17 @@ mod Treasure {
         /// We test if the default constructor does its job.
         #[test]
         fn default_works() {
-            let Treasure = Treasure::default();
-            assert_eq!(Treasure.get(), false);
+            let Oracle = Oracle::default();
+            assert_eq!(Oracle.get(), false);
         }
 
         /// We test a simple use case of our contract.
         #[test]
         fn it_works() {
-            let mut Treasure = Treasure::new(false);
-            assert_eq!(Treasure.get(), false);
-            Treasure.flip();
-            assert_eq!(Treasure.get(), true);
+            let mut Oracle = Oracle::new(false);
+            assert_eq!(Oracle.get(), false);
+            Oracle.flip();
+            assert_eq!(Oracle.get(), true);
         }
     }
 }
