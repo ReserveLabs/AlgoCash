@@ -14,6 +14,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use self::asset::Asset;
 use ink_lang as ink;
 
 #[ink::contract]
@@ -178,7 +179,8 @@ mod asset {
                 return Err(Error::InsufficientAllowance)
             }
             self.transfer_from_to(from, to, value)?;
-            self.allowances.insert((from, caller), allowance - value);
+            let r = allowance.checked_sub(value).expect("");
+            self.allowances.insert((from, caller), r);
             Ok(())
         }
 
@@ -200,9 +202,12 @@ mod asset {
             if from_balance < value {
                 return Err(Error::InsufficientBalance)
             }
-            self.balances.insert(from, from_balance - value);
+            let r = from_balance.checked_sub(value).expect("");
+            self.balances.insert(from, r);
             let to_balance = self.balance_of(to);
-            self.balances.insert(to, to_balance + value);
+
+            let ar = to_balance.checked_add(value).expect("");
+            self.balances.insert(to, ar);
             self.env().emit_event(Transfer {
                 from: Some(from),
                 to: Some(to),
@@ -223,12 +228,15 @@ mod asset {
         ) -> Result<()> {
 
             let balance_before = self.balance_of(to);
-            self.balances.insert(to, balance_before + value);
+            let ar = balance_before.checked_add(value).expect("");
+            self.balances.insert(to, ar);
             let balance_after = self.balance_of(to);
             if balance_after < balance_before {
                 return Err(Error::InvalidValue)
             }
-            self.total_supply = Lazy::new(self.total_supply() + value);
+            let ts = self.total_supply();
+            let ar = ts.checked_add(value).expect("");
+            self.total_supply = Lazy::new(ar);
             self.env().emit_event(Transfer {
                 from: Some(self.owner),
                 to: Some(to),
@@ -255,8 +263,13 @@ mod asset {
             if from_balance < value {
                 return Err(Error::InsufficientBalance);
             }
-            self.balances.insert(caller, from_balance - value);
-            self.total_supply = Lazy::new(self.total_supply() - value);
+
+            let sr = from_balance.checked_sub(value).expect("");
+            self.balances.insert(caller, sr);
+
+            let ts = self.total_supply();
+            let sr = ts.checked_sub(value).expect("");
+            self.total_supply = Lazy::new(sr);
             self.env().emit_event(Transfer {
                 from: Some(caller),
                 to: Some(self.owner),
@@ -289,9 +302,15 @@ mod asset {
                 return Err(Error::InsufficientBalance);
             }
 
-            self.allowances.insert((from, caller), allowance - value);
-            self.balances.insert(caller, from_balance - value);
-            self.total_supply = Lazy::new(self.total_supply() - value);
+            let sr = allowance.checked_sub(value).expect("");
+            self.allowances.insert((from, caller), sr);
+
+            let sr = from_balance.checked_sub(value).expect("");
+            self.balances.insert(caller, sr);
+
+            let ts = self.total_supply();
+            let sr = ts.checked_sub(value).expect("");
+            self.total_supply = Lazy::new(sr);
             self.env().emit_event(Transfer {
                 from: Some(caller),
                 to: Some(self.owner),
