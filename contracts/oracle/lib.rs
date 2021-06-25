@@ -1,71 +1,51 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use self::oracle::Oracle;
 use ink_lang as ink;
 
 #[ink::contract]
 mod oracle {
 
-    /// Defines the storage of your contract.
-    /// Add new fields to the below struct in order
-    /// to add new static storage fields to your contract.
     #[ink(storage)]
     pub struct Oracle {
-        /// Stores a single `bool` value on the storage.
-        value: bool,
+        cash_price: u128,
+        last_update_time_stamp: u32,
     }
 
     impl Oracle {
-        /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
-        pub fn new(init_value: bool) -> Self {
-            Self { value: init_value }
+        pub fn new() -> Self {
+            Self {
+                cash_price: 0,
+                last_update_time_stamp: 0,
+            }
         }
 
-        /// Constructor that initializes the `bool` value to `false`.
-        ///
-        /// Constructors can delegate to other constructors.
-        #[ink(constructor)]
-        pub fn default() -> Self {
-            Self::new(Default::default())
-        }
-
-        /// A message that can be called on instantiated contracts.
-        /// This one flips the value of the stored `bool` from `true`
-        /// to `false` and vice versa.
         #[ink(message)]
-        pub fn flip(&mut self) {
-            self.value = !self.value;
+        pub fn get_cash_price(&self) -> u128 {
+            self.cash_price
         }
 
-        /// Simply returns the current value of our `bool`.
         #[ink(message)]
-        pub fn get(&self) -> bool {
-            self.value
+        pub fn update_cash_price(&mut self, price: u128, ts: u32) {
+            assert!(ts - self.last_update_time_stamp > 1, "invalid time stamp");
+            self.cash_price = price;
+            self.last_update_time_stamp = ts;
         }
     }
 
-    /// Unit tests in Rust are normally defined within such a `#[cfg(test)]`
-    /// module and test functions are marked with a `#[test]` attribute.
-    /// The below code is technically just normal Rust code.
     #[cfg(test)]
     mod tests {
-        /// Imports all the definitions from the outer scope so we can use them here.
         use super::*;
 
-        /// We test if the default constructor does its job.
         #[test]
         fn default_works() {
             let Oracle = Oracle::default();
-            assert_eq!(Oracle.get(), false);
         }
 
-        /// We test a simple use case of our contract.
         #[test]
         fn it_works() {
             let mut Oracle = Oracle::new(false);
-            assert_eq!(Oracle.get(), false);
-            Oracle.flip();
-            assert_eq!(Oracle.get(), true);
         }
     }
 }
