@@ -20,8 +20,8 @@ mod treasure {
         accumulated_seigniorage: u128,
         ceiling_price: u128,
 
-        // cash: Lazy<Asset>,
-        // bond: Lazy<Asset>,
+        cash: Lazy<Asset>,
+        bond: Lazy<Asset>,
         oracle:  Lazy<Oracle>,
     }
 
@@ -48,28 +48,32 @@ mod treasure {
                    oracle_address: AccountId,
                    decimal: u128) -> Self {
 
-            // let cash: Asset = FromAccountId::from_account_id(cash_address);
-            // let bond: Asset = FromAccountId::from_account_id(bond_address);
+            let cash: Asset = FromAccountId::from_account_id(cash_address);
+            let bond: Asset = FromAccountId::from_account_id(bond_address);
             let oracle: Oracle = FromAccountId::from_account_id(oracle_address);
+
+            let r = decimal.checked_div(100).expect("");
+            let r = r.checked_mul(5).expect("");
+            let ar = decimal.checked_add(r).expect("");
 
             let instance = Self {
                 bond_cap: 0,
                 decimal,
                 cash_price_one: decimal,
                 accumulated_seigniorage: 0,
-                ceiling_price: decimal + 5 * decimal / 100,
+                ceiling_price: ar,
 
-                // cash: Lazy::new(cash),
-                // bond: Lazy::new(bond),
+                cash: Lazy::new(cash),
+                bond: Lazy::new(bond),
                 oracle: Lazy::new(oracle),
             };
             instance
         }
 
         fn _cash_balance_of_this(&self) -> u128 {
-            // let this = self.env().account_id();
-            // let b: u128 = self.cash.balance_of(this);
-            return 0;
+            let this = self.env().account_id();
+            let b: u128 = self.cash.balance_of(this);
+            return b;
         }
 
         fn _min(&self, a: u128, b: u128) -> u128 {
@@ -80,14 +84,19 @@ mod treasure {
             return b;
         }
 
+        fn _circulating_supply(&self) -> u128 {
+            let cash_supply: u128 = self.cash.total_supply();
+            let r = cash_supply.checked_sub(self.accumulated_seigniorage).expect("");
+            return r;
+        }
+
         fn _update_conversion_limit(&mut self, cash_price: u128) {
             let percentage = self.cash_price_one.checked_sub(cash_price).expect("");
+            let cap = self._circulating_supply().checked_mul(percentage).expect("");
 
-            // let cap = circulatingSupply().checked_mul(percentage).expect("");
-
-            // let b_cap = cap.checked_div(self.decimal).expect("");
-            // let bond_supply: u128 = self.bond.total_supply();
-            // self.bond_cap = b_cap.checked_sub(self._min(b_cap, bond_supply)).expect("");
+            let b_cap = cap.checked_div(self.decimal).expect("");
+            let bond_supply: u128 = self.bond.total_supply();
+            self.bond_cap = b_cap.checked_sub(self._min(b_cap, bond_supply)).expect("");
         }
 
         #[ink(message)]
@@ -111,8 +120,8 @@ mod treasure {
             let div_value = mul_value.checked_div(cash_price).expect("");
 
             let sender = Self::env().caller();
-            // self.cash.burn_from(sender, amount);
-            // self.bond.mint(sender, div_value);
+            self.cash.burn_from(sender, amount);
+            self.bond.mint(sender, div_value);
 
             self.env().emit_event(BoughtBonds {
                 from: Some(sender),
@@ -125,7 +134,6 @@ mod treasure {
             assert!(amount > 0, "Treasure: cannot redeem bonds with zero amount");
 
             let cash_price:u128 = self.oracle.get_cash_price();
-
             assert!(cash_price > self.ceiling_price, "Treasure: cashPrice not eligible for bond purchase");
 
             let b: u128 = self._cash_balance_of_this();
@@ -136,11 +144,11 @@ mod treasure {
 
             let sender = Self::env().caller();
 
-            // let burn_ret: bool = self.bond.burn_from(sender, amount).is_ok();
-            // assert!(burn_ret, "Treasure: transfer ok");
-            //
-            // let trans_ret: bool = self.cash.transfer(sender, amount).is_ok();;
-            // assert!(trans_ret, "Treasure: transfer ok");
+            let burn_ret: bool = self.bond.burn_from(sender, amount).is_ok();
+            assert!(burn_ret, "Treasure: transfer ok");
+
+            let trans_ret: bool = self.cash.transfer(sender, amount).is_ok();;
+            assert!(trans_ret, "Treasure: transfer ok");
 
             self.env().emit_event(RedeemedBonds {
                 from: Some(sender),
