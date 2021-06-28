@@ -8,6 +8,7 @@ mod treasure {
     use ink_storage::{
         Lazy,
     };
+    use ink_env::debug_println;
 
     use oracle::Oracle;
     use asset::Asset;
@@ -92,52 +93,77 @@ mod treasure {
 
         fn _update_conversion_limit(&mut self, cash_price: u128) {
             let percentage = self.cash_price_one.checked_sub(cash_price).expect("");
-            let cap = self._circulating_supply().checked_mul(percentage).expect("");
 
+            let cap = self._circulating_supply().checked_mul(percentage).expect("");
             let b_cap = cap.checked_div(self.decimal).expect("");
             let bond_supply: u128 = self.bond.total_supply();
+
             self.bond_cap = b_cap.checked_sub(self._min(b_cap, bond_supply)).expect("");
         }
 
         #[ink(message)]
         pub fn buy_bonds(&mut self, amount: u128, target_price: u128) {
+            debug_println!("enter buy_bonds");
             assert!(amount > 0, "Treasure: cannot purchase bonds with zero amount");
 
             let cash_price:u128 = self.oracle.get_cash_price();
 
+            let message = ink_prelude::format!("cash_price {:?}", cash_price);
+            ink_env::debug_println!("{}", &message);
+
             assert!(cash_price <= target_price, "Treasure: cash price moved");
             assert!(cash_price < self.cash_price_one, "Treasure: cash_price not eligible for bond purchase");
 
+            debug_println!("cash_price is valid");
+
             self._update_conversion_limit(cash_price);
+
+            debug_println!("cash_price is valid2");
 
             let mul_value = self.bond_cap.checked_mul(cash_price).expect("");
             let div_value = mul_value.checked_div(self.decimal).expect("");
-
             let amount = self._min(amount, div_value);
+
+            let message = ink_prelude::format!("amount is {:?}", amount);
+            ink_env::debug_println!("{}", &message);
+
             assert!(amount > 0, "Treasure: amount exceeds bond cap");
+            debug_println!("amount > 0");
 
             let mul_value = amount.checked_mul(self.decimal).expect("");
             let div_value = mul_value.checked_div(cash_price).expect("");
 
             let sender = Self::env().caller();
-            self.cash.burn_from(sender, amount);
-            self.bond.mint(sender, div_value);
+            let burn_ret:bool = self.cash.burn_from(sender, amount).is_ok();
+            assert!(burn_ret, "Treasure: transfer ok");
+
+            let mint:bool = self.bond.mint(sender, div_value).is_ok();
+            assert!(mint, "Treasure: mint ok");
+
+            debug_println!("transfer is over");
 
             self.env().emit_event(BoughtBonds {
                 from: Some(sender),
                 amount,
-            })
+            });
+
+            debug_println!("leave buy_bonds");
         }
 
         #[ink(message)]
         pub fn redeem_bonds(&mut self, amount: u128) {
+            debug_println!("enter redeem_bonds");
             assert!(amount > 0, "Treasure: cannot redeem bonds with zero amount");
 
             let cash_price:u128 = self.oracle.get_cash_price();
             assert!(cash_price > self.ceiling_price, "Treasure: cashPrice not eligible for bond purchase");
 
+            debug_println!("cash_price > self.ceiling_price");
+
             let b: u128 = self._cash_balance_of_this();
             assert!(b >= amount, "Treasure: treasure has no more budget");
+
+            debug_println!("b >= amount");
 
             let sub_value = self.accumulated_seigniorage.checked_sub(self._min(self.accumulated_seigniorage, amount)).expect("");
             self.accumulated_seigniorage = sub_value;
@@ -147,13 +173,14 @@ mod treasure {
             let burn_ret: bool = self.bond.burn_from(sender, amount).is_ok();
             assert!(burn_ret, "Treasure: transfer ok");
 
-            let trans_ret: bool = self.cash.transfer(sender, amount).is_ok();;
+            let trans_ret: bool = self.cash.transfer(sender, amount).is_ok();
             assert!(trans_ret, "Treasure: transfer ok");
 
             self.env().emit_event(RedeemedBonds {
                 from: Some(sender),
                 amount,
             });
+            debug_println!("leave redeem_bonds");
         }
     }
 
