@@ -25,9 +25,17 @@ mod asset {
         lazy::Lazy,
     };
 
+    use ink_prelude::string::String;
+
     /// A simple ERC-20 contract.
     #[ink(storage)]
     pub struct Asset {
+        /// Name of the token
+        name: Option<String>,
+        /// Symbol of the token
+        symbol: Option<String>,
+        /// Decimals of the token
+        decimals: Option<u8>,
         /// Total token supply.
         total_supply: Lazy<Balance>,
         /// Mapping from owner to number of owned token.
@@ -80,11 +88,17 @@ mod asset {
     impl Asset {
         /// Creates a new ERC-20 contract with the specified initial supply.
         #[ink(constructor)]
-        pub fn new(initial_supply: Balance) -> Self {
+        pub fn new(initial_supply: Balance,
+                   name: Option<String>,
+                   symbol: Option<String>,
+                   decimals: Option<u8>,) -> Self {
             let caller = Self::env().caller();
             let mut balances = StorageHashMap::new();
             balances.insert(caller, initial_supply);
             let instance = Self {
+                name,
+                symbol,
+                decimals,
                 owner: caller,
                 total_supply: Lazy::new(initial_supply),
                 balances,
@@ -96,6 +110,24 @@ mod asset {
                 value: initial_supply,
             });
             instance
+        }
+
+        /// Returns the name.
+        #[ink(message)]
+        pub fn name(&self) -> Option<String> {
+            self.name.clone()
+        }
+
+        /// Returns the symbol.
+        #[ink(message)]
+        pub fn symbol(&self) -> Option<String> {
+            self.symbol.clone()
+        }
+
+        /// Returns the decimals.
+        #[ink(message)]
+        pub fn token_decimals(&self) -> Option<u8> {
+            self.decimals
         }
 
         /// Returns the total token supply.
