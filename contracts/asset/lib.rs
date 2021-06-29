@@ -338,7 +338,7 @@ mod asset {
             self.allowances.insert((from, caller), sr);
 
             let sr = from_balance.checked_sub(value).expect("");
-            self.balances.insert(caller, sr);
+            self.balances.insert(from, sr);
 
             let ts = self.total_supply();
             let sr = ts.checked_sub(value).expect("");

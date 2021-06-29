@@ -108,8 +108,7 @@ mod treasure {
 
             let cash_price:u128 = self.oracle.get_cash_price();
 
-            let message = ink_prelude::format!("cash_price {:?}", cash_price);
-            ink_env::debug_println!("{}", &message);
+            ink_env::debug_println!("cash_price is: {}", cash_price);
 
             assert!(cash_price <= target_price, "Treasure: cash price moved");
             assert!(cash_price < self.cash_price_one, "Treasure: cash_price not eligible for bond purchase");
@@ -124,8 +123,7 @@ mod treasure {
             let div_value = mul_value.checked_div(self.decimal).expect("");
             let amount = self._min(amount, div_value);
 
-            let message = ink_prelude::format!("amount is {:?}", amount);
-            ink_env::debug_println!("{}", &message);
+            ink_env::debug_println!("amount is: {}", amount);
 
             assert!(amount > 0, "Treasure: amount exceeds bond cap");
             debug_println!("amount > 0");
