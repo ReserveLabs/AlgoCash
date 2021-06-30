@@ -25,6 +25,7 @@ Disallowing redemptions when the Algo Cash price is below 1 aUSD prevents bond h
 The Boardroom allows Algo Share holders to claim excess Algo Cash minted by the protocol. Holders of Algo Shares can stake their Shares to the Boardroom contract, which by doing so, they can claim a pro-rata share of Algo Cash tokens assigned to the Boardroom.
 
 ## Code Structure
+
 ![image](https://user-images.githubusercontent.com/77781754/123919774-dde5ce80-d9b7-11eb-8426-57c312b3756a.png)
 
 ## Deployment
