@@ -3,7 +3,7 @@
 use ink_lang as ink;
 
 #[ink::contract]
-mod treasure {
+mod treasury {
     use ink_env::call::FromAccountId;
     use ink_storage::{
         Lazy,
@@ -14,7 +14,7 @@ mod treasure {
     use asset::Asset;
 
     #[ink(storage)]
-    pub struct Treasure {
+    pub struct Treasury {
         bond_cap: u128,
         decimal: u128,
         cash_price_one: u128,
@@ -42,7 +42,7 @@ mod treasure {
         amount: u128,
     }
 
-    impl Treasure {
+    impl Treasury {
         #[ink(constructor)]
         pub fn new(cash_address:AccountId,
                    bond_address: AccountId,
@@ -159,7 +159,7 @@ mod treasure {
             debug_println!("cash_price > self.ceiling_price");
 
             let b: u128 = self._cash_balance_of_this();
-            assert!(b >= amount, "Treasure: treasure has no more budget");
+            assert!(b >= amount, "Treasure: treasury has no more budget");
 
             debug_println!("b >= amount");
 
