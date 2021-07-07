@@ -34,6 +34,14 @@ mod util {
         }
 
         #[ink(message)]
+        pub fn get_ceiling_price(&self) -> u128 {
+            let r = self.one_unit_with_decimal.checked_div(100).expect("");
+            let r = r.checked_mul(5).expect("");
+            let ar = self.one_unit_with_decimal.checked_add(r).expect("");
+            return ar
+        }
+
+        #[ink(message)]
         pub fn math_min(&self, a: u128, b: u128) -> u128 {
             if a < b {
                 return a;

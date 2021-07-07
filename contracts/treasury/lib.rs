@@ -19,7 +19,6 @@ mod treasury {
     pub struct Treasury {
         bond_cap: u128,
         accumulated_seigniorage: u128,
-        ceiling_price: u128,
 
         util:  Lazy<Util>,
         oracle:  Lazy<Oracle>,
@@ -50,8 +49,7 @@ mod treasury {
                    cash_address:AccountId,
                    bond_address: AccountId,
                    oracle_address: AccountId,
-                   boardroom_address: AccountId,
-                   decimal: u128) -> Self {
+                   boardroom_address: AccountId) -> Self {
 
             let util: Util = FromAccountId::from_account_id(util_address);
             let cash: Asset = FromAccountId::from_account_id(cash_address);
@@ -59,14 +57,9 @@ mod treasury {
             let oracle: Oracle = FromAccountId::from_account_id(oracle_address);
             let boardroom: Boardroom = FromAccountId::from_account_id(boardroom_address);
 
-            let r = decimal.checked_div(100).expect("");
-            let r = r.checked_mul(5).expect("");
-            let ar = decimal.checked_add(r).expect("");
-
             let instance = Self {
                 bond_cap: 0,
                 accumulated_seigniorage: 0,
-                ceiling_price: ar,
 
                 util: Lazy::new(util),
                 cash: Lazy::new(cash),
@@ -160,9 +153,10 @@ mod treasury {
             assert!(amount > 0, "Treasure: cannot redeem bonds with zero amount");
 
             let cash_price:u128 = self.oracle.get_cash_price();
-            assert!(cash_price > self.ceiling_price, "Treasure: cashPrice not eligible for bond purchase");
+            let ceiling_price:u128 = self.util.get_ceiling_price();
+            assert!(cash_price > ceiling_price, "Treasure: cashPrice not eligible for bond purchase");
 
-            debug_println!("cash_price > self.ceiling_price");
+            debug_println!("cash_price > ceiling_price");
 
             let b: u128 = self._cash_balance_of_this();
             assert!(b >= amount, "Treasure: treasury has no more budget");
@@ -189,8 +183,55 @@ mod treasury {
 
         #[ink(message)]
         pub fn allocate_seigniorage(&mut self) {
+        //     _updateCashPrice();
+        //     uint256 cashPrice = _getCashPrice(seigniorageOracle);
+        //     if (cashPrice <= getCeilingPrice()) {
+        //         return; // just advance epoch instead revert
+        //     }
+        //
+        //     // circulating supply
+        //     uint256 percentage = cashPrice.sub(cashPriceOne);
+        //     uint256 seigniorage = circulatingSupply().mul(percentage).div(1e18);
+        //     IBasisAsset(cash).mint(address(this), seigniorage);
+        //
+        //     // ======================== BIP-3
+        //     uint256 fundReserve = seigniorage.mul(fundAllocationRate).div(100);
+        //     if (fundReserve > 0) {
+        //         IERC20(cash).safeApprove(fund, fundReserve);
+        //         ISimpleERCFund(fund).deposit(
+        //             cash,
+        //             fundReserve,
+        //             'Treasury: Seigniorage Allocation'
+        //         );
+        //         emit ContributionPoolFunded(now, fundReserve);
+        //     }
+        //
+        //     seigniorage = seigniorage.sub(fundReserve);
+        //
+        //     // ======================== BIP-4
+        //     uint256 treasuryReserve =
+        //         Math.min(
+        //             seigniorage,
+        //             IERC20(bond).totalSupply().sub(accumulatedSeigniorage)
+        //         );
+        //     if (treasuryReserve > 0) {
+        //         if (treasuryReserve == seigniorage) {
+        //             treasuryReserve = treasuryReserve.mul(80).div(100);
+        //         }
+        //         accumulatedSeigniorage = accumulatedSeigniorage.add(
+        //             treasuryReserve
+        //         );
+        //         emit TreasuryFunded(now, treasuryReserve);
+        //     }
+        //
+        //     // boardroom
+        //     uint256 boardroomReserve = seigniorage.sub(treasuryReserve);
+        //     if (boardroomReserve > 0) {
+        //         IERC20(cash).safeApprove(boardroom, boardroomReserve);
+        //         IBoardroom(boardroom).allocateSeigniorage(boardroomReserve);
+        //         emit BoardroomFunded(now, boardroomReserve);
+        //     }
         }
-
     }
 
     #[cfg(test)]
