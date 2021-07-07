@@ -236,8 +236,8 @@ mod asset {
             }
             let r = from_balance.checked_sub(value).expect("");
             self.balances.insert(from, r);
-            let to_balance = self.balance_of(to);
 
+            let to_balance = self.balance_of(to);
             let ar = to_balance.checked_add(value).expect("");
             self.balances.insert(to, ar);
             self.env().emit_event(Transfer {
