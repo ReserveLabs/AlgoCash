@@ -10,20 +10,22 @@ mod treasury {
     };
     use ink_env::debug_println;
 
+    use util::Util;
     use oracle::Oracle;
     use asset::Asset;
+    use boardroom::Boardroom;
 
     #[ink(storage)]
     pub struct Treasury {
         bond_cap: u128,
-        decimal: u128,
-        cash_price_one: u128,
         accumulated_seigniorage: u128,
         ceiling_price: u128,
 
+        util:  Lazy<Util>,
+        oracle:  Lazy<Oracle>,
         cash: Lazy<Asset>,
         bond: Lazy<Asset>,
-        oracle:  Lazy<Oracle>,
+        boardroom:  Lazy<Boardroom>,
     }
 
     #[ink(event)]
@@ -44,14 +46,18 @@ mod treasury {
 
     impl Treasury {
         #[ink(constructor)]
-        pub fn new(cash_address:AccountId,
+        pub fn new(util_address:AccountId,
+                   cash_address:AccountId,
                    bond_address: AccountId,
                    oracle_address: AccountId,
+                   boardroom_address: AccountId,
                    decimal: u128) -> Self {
 
+            let util: Util = FromAccountId::from_account_id(util_address);
             let cash: Asset = FromAccountId::from_account_id(cash_address);
             let bond: Asset = FromAccountId::from_account_id(bond_address);
             let oracle: Oracle = FromAccountId::from_account_id(oracle_address);
+            let boardroom: Boardroom = FromAccountId::from_account_id(boardroom_address);
 
             let r = decimal.checked_div(100).expect("");
             let r = r.checked_mul(5).expect("");
@@ -59,14 +65,14 @@ mod treasury {
 
             let instance = Self {
                 bond_cap: 0,
-                decimal,
-                cash_price_one: decimal,
                 accumulated_seigniorage: 0,
                 ceiling_price: ar,
 
+                util: Lazy::new(util),
                 cash: Lazy::new(cash),
                 bond: Lazy::new(bond),
                 oracle: Lazy::new(oracle),
+                boardroom: Lazy::new(boardroom),
             };
             instance
         }
@@ -77,14 +83,6 @@ mod treasury {
             return b;
         }
 
-        fn _min(&self, a: u128, b: u128) -> u128 {
-            if a < b {
-                return a;
-            }
-
-            return b;
-        }
-
         fn _circulating_supply(&self) -> u128 {
             let cash_supply: u128 = self.cash.total_supply();
             let r = cash_supply.checked_sub(self.accumulated_seigniorage).expect("");
@@ -92,13 +90,17 @@ mod treasury {
         }
 
         fn _update_conversion_limit(&mut self, cash_price: u128) {
-            let percentage = self.cash_price_one.checked_sub(cash_price).expect("");
+            let cash_price_one = self.util.get_one_unit_with_decimal();
+            let percentage = cash_price_one.checked_sub(cash_price).expect("");
 
             let cap = self._circulating_supply().checked_mul(percentage).expect("");
-            let b_cap = cap.checked_div(self.decimal).expect("");
+
+            let decimal = self.util.get_decimal();
+            let b_cap = cap.checked_div(decimal.into()).expect("");
+
             let bond_supply: u128 = self.bond.total_supply();
 
-            self.bond_cap = b_cap.checked_sub(self._min(b_cap, bond_supply)).expect("");
+            self.bond_cap = b_cap.checked_sub(self.util.math_min(b_cap, bond_supply)).expect("");
         }
 
         #[ink(message)]
@@ -111,7 +113,9 @@ mod treasury {
             ink_env::debug_println!("cash_price is: {}", cash_price);
 
             assert!(cash_price <= target_price, "Treasure: cash price moved");
-            assert!(cash_price < self.cash_price_one, "Treasure: cash_price not eligible for bond purchase");
+
+            let cash_price_one = self.util.get_one_unit_with_decimal();
+            assert!(cash_price < cash_price_one, "Treasure: cash_price not eligible for bond purchase");
 
             debug_println!("cash_price is valid");
 
@@ -120,15 +124,17 @@ mod treasury {
             debug_println!("cash_price is valid2");
 
             let mul_value = self.bond_cap.checked_mul(cash_price).expect("");
-            let div_value = mul_value.checked_div(self.decimal).expect("");
-            let amount = self._min(amount, div_value);
+
+            let decimal = self.util.get_decimal();
+            let div_value = mul_value.checked_div(decimal.into()).expect("");
+            let amount = self.util.math_min(amount, div_value);
 
             ink_env::debug_println!("amount is: {}", amount);
 
             assert!(amount > 0, "Treasure: amount exceeds bond cap");
             debug_println!("amount > 0");
 
-            let mul_value = amount.checked_mul(self.decimal).expect("");
+            let mul_value = amount.checked_mul(decimal.into()).expect("");
             let div_value = mul_value.checked_div(cash_price).expect("");
 
             let sender = Self::env().caller();
@@ -163,7 +169,7 @@ mod treasury {
 
             debug_println!("b >= amount");
 
-            let sub_value = self.accumulated_seigniorage.checked_sub(self._min(self.accumulated_seigniorage, amount)).expect("");
+            let sub_value = self.accumulated_seigniorage.checked_sub(self.util.math_min(self.accumulated_seigniorage, amount)).expect("");
             self.accumulated_seigniorage = sub_value;
 
             let sender = Self::env().caller();
@@ -180,6 +186,11 @@ mod treasury {
             });
             debug_println!("leave redeem_bonds");
         }
+
+        #[ink(message)]
+        pub fn allocate_seigniorage(&mut self) {
+        }
+
     }
 
     #[cfg(test)]
