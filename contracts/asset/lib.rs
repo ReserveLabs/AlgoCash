@@ -236,7 +236,6 @@ mod asset {
             }
             let r = from_balance.checked_sub(value).expect("");
             self.balances.insert(from, r);
-
             let to_balance = self.balance_of(to);
             let ar = to_balance.checked_add(value).expect("");
             self.balances.insert(to, ar);
@@ -258,7 +257,6 @@ mod asset {
             to: AccountId,
             value: Balance,
         ) -> Result<()> {
-
             let balance_before = self.balance_of(to);
             let ar = balance_before.checked_add(value).expect("");
             self.balances.insert(to, ar);

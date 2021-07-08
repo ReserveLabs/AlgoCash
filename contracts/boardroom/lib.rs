@@ -83,6 +83,9 @@ mod boardroom {
         balances: StorageHashMap<AccountId, u128>,
         directors: StorageHashMap<AccountId, BoardSeat>,
         board_history: StorageVec<BoardSnapshot>,
+
+        operator: AccountId,
+        status: StorageHashMap<(u32, AccountId), bool>,
     }
 
     impl Boardroom {
@@ -93,7 +96,7 @@ mod boardroom {
             let share: Asset = FromAccountId::from_account_id(share_address);
             let cash: Asset = FromAccountId::from_account_id(cash_address);
             let util: Util = FromAccountId::from_account_id(util_address);
-
+            let sender = Self::env().caller();
             let mut history: StorageVec<BoardSnapshot> = StorageVec::new();
             let genesis = BoardSnapshot {
                 time: Self::env().block_number(),
@@ -110,7 +113,22 @@ mod boardroom {
                 balances: StorageHashMap::new(),
                 directors: StorageHashMap::new(),
                 board_history: history,
+                operator: sender,
+                status: StorageHashMap::new(),
             }
+        }
+
+        fn _check_same_sender_rented(&self) {
+            let block_num:u32 = Self::env().block_number();
+            let sender = Self::env().caller();
+            let rented:bool = self.status.get(&(block_num, sender)).copied().unwrap_or(false);
+            assert!(!rented, "Boardroom: : _check_same_sender_rented err");
+        }
+
+        fn _update_sender_rented_status(&mut self) {
+            let block_num:u32 = Self::env().block_number();
+            let sender = Self::env().caller();
+            self.status.insert((block_num, sender), true);
         }
 
         fn _director_exists(&self) {
@@ -208,6 +226,22 @@ mod boardroom {
             assert!(ret, "Boardroom: _withdraw share.transfer err");
         }
 
+        fn _only_operator(&self) {
+            let sender = Self::env().caller();
+            assert!(self.operator == sender, "Boardroom: caller is not the operator");
+        }
+
+        #[ink(message)]
+        pub fn operator(&self) -> AccountId {
+            return self.operator;
+        }
+
+        #[ink(message)]
+        pub fn transfer_operator(&mut self, new_operator:AccountId)  {
+            self._only_operator();
+            self.operator = new_operator;
+        }
+
         #[ink(message)]
         pub fn reward_per_share(&self) -> u128 {
             let index = self.latest_snapshot_index();
@@ -237,6 +271,8 @@ mod boardroom {
 
         #[ink(message)]
         pub fn stake(&mut self, amount: u128) {
+            self._check_same_sender_rented();
+
             let sender = Self::env().caller();
             self._update_reward(sender);
             assert!(amount > 0, "Boardroom: Cannot stake 0");
@@ -245,12 +281,15 @@ mod boardroom {
                 user: Some(sender),
                 amount,
             });
+            self._update_sender_rented_status();
         }
 
         #[ink(message)]
         pub fn withdraw(&mut self, amount: u128) {
-            let sender = Self::env().caller();
+            self._check_same_sender_rented();
             self._director_exists();
+
+            let sender = Self::env().caller();
             self._update_reward(sender);
             assert!(amount > 0, "Boardroom: Cannot withdraw 0");
             self._withdraw(amount);
@@ -258,6 +297,7 @@ mod boardroom {
                 user: Some(sender),
                 amount,
             });
+            self._update_sender_rented_status();
         }
 
         #[ink(message)]
@@ -271,6 +311,7 @@ mod boardroom {
         #[ink(message)]
         pub fn claim_reward(&mut self) {
             let sender = Self::env().caller();
+            self._update_reward(sender);
             let seat = self._get_director_board_seat(sender).unwrap();
             let reward: u128 = seat.reward_earned;
             if reward > 0 {
@@ -289,6 +330,8 @@ mod boardroom {
 
         #[ink(message)]
         pub fn allocate_seigniorage(&mut self, amount: u128) {
+            self._only_operator();
+            self._check_same_sender_rented();
             assert!(amount > 0, "Boardroom: Cannot allocate 0");
 
             let total: u128 = self.total_supply();
@@ -316,6 +359,7 @@ mod boardroom {
                 user: Some(sender),
                 reward: amount,
             });
+            self._update_sender_rented_status();
         }
     }
 
