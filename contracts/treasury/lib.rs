@@ -19,8 +19,8 @@ mod treasury {
     pub struct Treasury {
         bond_cap: u128,
         accumulated_seigniorage: u128,
-        ceiling_price: u128,
 
+        room_address: AccountId,
         util:  Lazy<Util>,
         oracle:  Lazy<Oracle>,
         cash: Lazy<Asset>,
@@ -44,14 +44,29 @@ mod treasury {
         amount: u128,
     }
 
+    #[ink(event)]
+    pub struct TreasuryFunded {
+        #[ink(topic)]
+        timestamp: u64,
+        #[ink(topic)]
+        seigniorage: u128,
+    }
+
+    #[ink(event)]
+    pub struct BoardroomFunded {
+        #[ink(topic)]
+        timestamp: u64,
+        #[ink(topic)]
+        seigniorage: u128,
+    }
+
     impl Treasury {
         #[ink(constructor)]
         pub fn new(util_address:AccountId,
                    cash_address:AccountId,
                    bond_address: AccountId,
                    oracle_address: AccountId,
-                   boardroom_address: AccountId,
-                   decimal: u128) -> Self {
+                   boardroom_address: AccountId) -> Self {
 
             let util: Util = FromAccountId::from_account_id(util_address);
             let cash: Asset = FromAccountId::from_account_id(cash_address);
@@ -59,15 +74,11 @@ mod treasury {
             let oracle: Oracle = FromAccountId::from_account_id(oracle_address);
             let boardroom: Boardroom = FromAccountId::from_account_id(boardroom_address);
 
-            let r = decimal.checked_div(100).expect("");
-            let r = r.checked_mul(5).expect("");
-            let ar = decimal.checked_add(r).expect("");
-
             let instance = Self {
                 bond_cap: 0,
                 accumulated_seigniorage: 0,
-                ceiling_price: ar,
 
+                room_address: boardroom_address,
                 util: Lazy::new(util),
                 cash: Lazy::new(cash),
                 bond: Lazy::new(bond),
@@ -160,9 +171,10 @@ mod treasury {
             assert!(amount > 0, "Treasure: cannot redeem bonds with zero amount");
 
             let cash_price:u128 = self.oracle.get_cash_price();
-            assert!(cash_price > self.ceiling_price, "Treasure: cashPrice not eligible for bond purchase");
+            let ceiling_price:u128 = self.util.get_ceiling_price();
+            assert!(cash_price > ceiling_price, "Treasure: cashPrice not eligible for bond purchase");
 
-            debug_println!("cash_price > self.ceiling_price");
+            debug_println!("cash_price > ceiling_price");
 
             let b: u128 = self._cash_balance_of_this();
             assert!(b >= amount, "Treasure: treasury has no more budget");
@@ -189,8 +201,49 @@ mod treasury {
 
         #[ink(message)]
         pub fn allocate_seigniorage(&mut self) {
-        }
+            let cash_price:u128 = self.oracle.get_cash_price();
+            let ceiling_price:u128 = self.util.get_ceiling_price();
+            assert!(cash_price > ceiling_price, "Treasure: cashPrice not eligible for allocate_seigniorage");
 
+            // circulating supply
+            let cash_price_one = self.util.get_one_unit_with_decimal();
+            let percentage:u128 = cash_price.checked_sub(cash_price_one).expect("");
+            let seigniorage_mul:u128 = self._circulating_supply().checked_mul(percentage).expect("");
+            let seigniorage:u128 = seigniorage_mul.checked_div(cash_price_one).expect("");
+
+            let this = self.env().account_id();
+            let mint_ret:bool = self.cash.mint(this, seigniorage).is_ok();
+            assert!(mint_ret, "Treasury: allocate_seigniorage mint err");
+
+            let bond_total:u128 = self.bond.total_supply();
+            let bond_total_sub:u128 = bond_total.checked_sub(self.accumulated_seigniorage).expect("");
+            let treasury_reserve_ori = self.util.math_min(seigniorage, bond_total_sub);
+            let mut treasury_reserve: u128 = 0;
+            if treasury_reserve_ori > 0 {
+                if treasury_reserve_ori == seigniorage {
+                    let treasury_reserve_mul:u128 = treasury_reserve_ori.checked_mul(80).expect("");
+                    treasury_reserve = treasury_reserve_mul.checked_div(100).expect("");
+                }
+                self.accumulated_seigniorage = self.accumulated_seigniorage.checked_add(treasury_reserve).expect("");
+                self.env().emit_event(TreasuryFunded {
+                    timestamp: Self::env().block_timestamp(),
+                    seigniorage: treasury_reserve,
+                });
+            }
+
+            // boardroom
+            let boardroom_reserve:u128 = seigniorage.checked_sub(treasury_reserve).expect("");
+            if boardroom_reserve > 0 {
+                let ret:bool = self.cash.approve(self.room_address, boardroom_reserve).is_ok();
+                assert!(ret, "Treasury: allocate_seigniorage approve err");
+
+                self.boardroom.allocate_seigniorage(boardroom_reserve);
+                self.env().emit_event(BoardroomFunded {
+                    timestamp: Self::env().block_timestamp(),
+                    seigniorage: treasury_reserve,
+                });
+            }
+        }
     }
 
     #[cfg(test)]
