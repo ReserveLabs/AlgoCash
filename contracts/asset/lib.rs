@@ -42,7 +42,7 @@ mod asset {
         balances: StorageHashMap<AccountId, Balance>,
         /// Mapping of the token amount which an account is allowed to withdraw
         /// Owner of the contract
-        owner: AccountId,
+        operator: AccountId,
         /// from another account.
         allowances: StorageHashMap<(AccountId, AccountId), Balance>,
     }
@@ -99,10 +99,10 @@ mod asset {
                 name,
                 symbol,
                 decimals,
-                owner: caller,
                 total_supply: Lazy::new(initial_supply),
                 balances,
                 allowances: StorageHashMap::new(),
+                operator: caller,
             };
             Self::env().emit_event(Transfer {
                 from: None,
@@ -110,6 +110,22 @@ mod asset {
                 value: initial_supply,
             });
             instance
+        }
+
+        fn _only_operator(&self) {
+            let sender = Self::env().caller();
+            assert!(self.operator == sender, "Asset: caller is not the operator");
+        }
+
+        #[ink(message)]
+        pub fn operator(&self) -> AccountId {
+            return self.operator;
+        }
+
+        #[ink(message)]
+        pub fn transfer_operator(&mut self, new_operator:AccountId)  {
+            self._only_operator();
+            self.operator = new_operator;
         }
 
         /// Returns the name.
@@ -236,7 +252,6 @@ mod asset {
             }
             let r = from_balance.checked_sub(value).expect("");
             self.balances.insert(from, r);
-
             let to_balance = self.balance_of(to);
             let ar = to_balance.checked_add(value).expect("");
             self.balances.insert(to, ar);
@@ -258,7 +273,7 @@ mod asset {
             to: AccountId,
             value: Balance,
         ) -> Result<()> {
-
+            self._only_operator();
             let balance_before = self.balance_of(to);
             let ar = balance_before.checked_add(value).expect("");
             self.balances.insert(to, ar);
@@ -270,7 +285,7 @@ mod asset {
             let ar = ts.checked_add(value).expect("");
             self.total_supply = Lazy::new(ar);
             self.env().emit_event(Transfer {
-                from: Some(self.owner),
+                from: Some(self.operator),
                 to: Some(to),
                 value,
             });
@@ -304,7 +319,7 @@ mod asset {
             self.total_supply = Lazy::new(sr);
             self.env().emit_event(Transfer {
                 from: Some(caller),
-                to: Some(self.owner),
+                to: Some(self.operator),
                 value,
             });
             Ok(())
@@ -324,6 +339,7 @@ mod asset {
             from: AccountId,
             value: Balance,
         ) -> Result<()> {
+            self._only_operator();
             let caller = self.env().caller();
             let allowance = self.allowance(from, caller);
             if allowance < value {
@@ -345,7 +361,7 @@ mod asset {
             self.total_supply = Lazy::new(sr);
             self.env().emit_event(Transfer {
                 from: Some(caller),
-                to: Some(self.owner),
+                to: Some(self.operator),
                 value,
             });
             Ok(())

@@ -6,6 +6,9 @@ use ink_lang as ink;
 mod treasury {
     use ink_env::call::FromAccountId;
     use ink_storage::{
+        collections::{
+            HashMap as StorageHashMap,
+        },
         Lazy,
     };
     use ink_env::debug_println;
@@ -25,7 +28,10 @@ mod treasury {
         oracle:  Lazy<Oracle>,
         cash: Lazy<Asset>,
         bond: Lazy<Asset>,
+        share: Lazy<Asset>,
         boardroom:  Lazy<Boardroom>,
+
+        status: StorageHashMap<(u32, AccountId), bool>,
     }
 
     #[ink(event)]
@@ -65,12 +71,14 @@ mod treasury {
         pub fn new(util_address:AccountId,
                    cash_address:AccountId,
                    bond_address: AccountId,
+                   share_address: AccountId,
                    oracle_address: AccountId,
                    boardroom_address: AccountId) -> Self {
 
             let util: Util = FromAccountId::from_account_id(util_address);
             let cash: Asset = FromAccountId::from_account_id(cash_address);
             let bond: Asset = FromAccountId::from_account_id(bond_address);
+            let share: Asset = FromAccountId::from_account_id(share_address);
             let oracle: Oracle = FromAccountId::from_account_id(oracle_address);
             let boardroom: Boardroom = FromAccountId::from_account_id(boardroom_address);
 
@@ -82,8 +90,10 @@ mod treasury {
                 util: Lazy::new(util),
                 cash: Lazy::new(cash),
                 bond: Lazy::new(bond),
+                share: Lazy::new(share),
                 oracle: Lazy::new(oracle),
                 boardroom: Lazy::new(boardroom),
+                status: StorageHashMap::new(),
             };
             instance
         }
@@ -114,9 +124,32 @@ mod treasury {
             self.bond_cap = b_cap.checked_sub(self.util.math_min(b_cap, bond_supply)).expect("");
         }
 
+        fn _check_operator(&self) {
+            let this = self.env().account_id();
+            assert!(self.cash.operator() == this &&
+                    self.bond.operator() == this &&
+                    self.share.operator() == this &&
+                    self.boardroom.operator() == this, "Treasury: need more permission");
+        }
+
+        fn _check_same_sender_rented(&self) {
+            let block_num:u32 = Self::env().block_number();
+            let sender = Self::env().caller();
+            let rented:bool = self.status.get(&(block_num, sender)).copied().unwrap_or(false);
+            assert!(!rented, "Boardroom: : _check_same_sender_rented err");
+        }
+
+        fn _update_sender_rented_status(&mut self) {
+            let block_num:u32 = Self::env().block_number();
+            let sender = Self::env().caller();
+            self.status.insert((block_num, sender), true);
+        }
+
         #[ink(message)]
         pub fn buy_bonds(&mut self, amount: u128, target_price: u128) {
             debug_println!("enter buy_bonds");
+            self._check_operator();
+            self._check_same_sender_rented();
             assert!(amount > 0, "Treasure: cannot purchase bonds with zero amount");
 
             let cash_price:u128 = self.oracle.get_cash_price();
@@ -161,13 +194,15 @@ mod treasury {
                 from: Some(sender),
                 amount,
             });
-
+            self._update_sender_rented_status();
             debug_println!("leave buy_bonds");
         }
 
         #[ink(message)]
         pub fn redeem_bonds(&mut self, amount: u128) {
             debug_println!("enter redeem_bonds");
+            self._check_operator();
+            self._check_same_sender_rented();
             assert!(amount > 0, "Treasure: cannot redeem bonds with zero amount");
 
             let cash_price:u128 = self.oracle.get_cash_price();
@@ -196,11 +231,14 @@ mod treasury {
                 from: Some(sender),
                 amount,
             });
+            self._update_sender_rented_status();
             debug_println!("leave redeem_bonds");
         }
 
         #[ink(message)]
         pub fn allocate_seigniorage(&mut self) {
+            self._check_operator();
+            self._check_same_sender_rented();
             let cash_price:u128 = self.oracle.get_cash_price();
             let ceiling_price:u128 = self.util.get_ceiling_price();
             assert!(cash_price > ceiling_price, "Treasure: cashPrice not eligible for allocate_seigniorage");
@@ -243,6 +281,7 @@ mod treasury {
                     seigniorage: treasury_reserve,
                 });
             }
+            self._update_sender_rented_status();
         }
     }
 
