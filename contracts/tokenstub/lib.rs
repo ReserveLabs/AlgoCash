@@ -1,74 +1,87 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use self::tokenstub::TokenStub;
 use ink_lang as ink;
 
 #[ink::contract]
 mod tokenstub {
+    use ink_prelude::string::String;
 
-    /// Defines the storage of your contract.
-    /// Add new fields to the below struct in order
-    /// to add new static storage fields to your contract.
+    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum Error {
+        /// Returned if not enough balance to fulfill a request is available.
+        InsufficientBalance,
+        /// Returned if not enough allowance to fulfill a request is available.
+        InsufficientAllowance,
+        /// Retuured if the value is invalid
+        InvalidValue,
+    }
+
+    pub type Result<T> = core::result::Result<T, Error>;
+
     #[ink(storage)]
-    pub struct Tokenstub {
-        /// Stores a single `bool` value on the storage.
-        value: bool,
-    }
+    pub struct TokenStub {}
 
-    impl Tokenstub {
-        /// Constructor that initializes the `bool` value to the given `init_value`.
+    impl TokenStub {
         #[ink(constructor)]
-        pub fn new(init_value: bool) -> Self {
-            Self { value: init_value }
+        pub fn new(
+            _initial_supply: Balance,
+            _name: Option<String>,
+            _symbol: Option<String>,
+            _decimals: Option<u8>,
+        ) -> Self {
+            unimplemented!()
         }
 
-        /// Constructor that initializes the `bool` value to `false`.
-        ///
-        /// Constructors can delegate to other constructors.
-        #[ink(constructor)]
-        pub fn default() -> Self {
-            Self::new(Default::default())
-        }
-
-        /// A message that can be called on instantiated contracts.
-        /// This one flips the value of the stored `bool` from `true`
-        /// to `false` and vice versa.
         #[ink(message)]
-        pub fn flip(&mut self) {
-            self.value = !self.value;
+        pub fn name(&self) -> Option<String> {
+            unimplemented!()
         }
 
-        /// Simply returns the current value of our `bool`.
         #[ink(message)]
-        pub fn get(&self) -> bool {
-            self.value
-        }
-    }
-
-    /// Unit tests in Rust are normally defined within such a `#[cfg(test)]`
-    /// module and test functions are marked with a `#[test]` attribute.
-    /// The below code is technically just normal Rust code.
-    #[cfg(test)]
-    mod tests {
-        /// Imports all the definitions from the outer scope so we can use them here.
-        use super::*;
-
-        /// Imports `ink_lang` so we can use `#[ink::test]`.
-        use ink_lang as ink;
-
-        /// We test if the default constructor does its job.
-        #[ink::test]
-        fn default_works() {
-            let tokenstub = Tokenstub::default();
-            assert_eq!(tokenstub.get(), false);
+        pub fn symbol(&self) -> Option<String> {
+            unimplemented!()
         }
 
-        /// We test a simple use case of our contract.
-        #[ink::test]
-        fn it_works() {
-            let mut tokenstub = Tokenstub::new(false);
-            assert_eq!(tokenstub.get(), false);
-            tokenstub.flip();
-            assert_eq!(tokenstub.get(), true);
+        #[ink(message)]
+        pub fn decimals(&self) -> Option<u8> {
+            unimplemented!()
+        }
+
+        #[ink(message)]
+        pub fn total_supply(&self) -> Balance {
+            unimplemented!()
+        }
+
+        #[ink(message)]
+        pub fn balance_of(&self, _owner: AccountId) -> Balance {
+            unimplemented!()
+        }
+
+        #[ink(message)]
+        pub fn transfer(&mut self, _to: AccountId, _value: Balance) -> Result<()> {
+            unimplemented!()
+        }
+
+        #[ink(message)]
+        pub fn allowance(&self, _owner: AccountId, _spender: AccountId) -> Balance {
+            unimplemented!()
+        }
+
+        #[ink(message)]
+        pub fn transfer_from(
+            &mut self,
+            _from: AccountId,
+            _to: AccountId,
+            _value: Balance,
+        ) -> Result<()> {
+            unimplemented!()
+        }
+
+        #[ink(message)]
+        pub fn approve(&mut self, _spender: AccountId, _value: Balance) -> Result<()> {
+            unimplemented!()
         }
     }
 }

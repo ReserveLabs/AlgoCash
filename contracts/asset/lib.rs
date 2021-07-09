@@ -142,7 +142,7 @@ mod asset {
 
         /// Returns the decimals.
         #[ink(message)]
-        pub fn token_decimals(&self) -> Option<u8> {
+        pub fn decimals(&self) -> Option<u8> {
             self.decimals
         }
 
