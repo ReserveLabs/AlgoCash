@@ -17,6 +17,7 @@ mod distributor {
     };
     use ink_env::call::FromAccountId;
     use asset::Asset;
+    use tokenstub::TokenStub;
 
     #[derive(Debug, PartialEq, Eq, Clone, scale::Encode, scale::Decode, SpreadLayout, PackedLayout)]
     #[cfg_attr(
@@ -31,7 +32,7 @@ mod distributor {
     #[ink(storage)]
     pub struct Distributor {
         cash: Lazy<Asset>,
-        a_usd: Lazy<Asset>,
+        a_usd: Lazy<TokenStub>,
 
         operator: AccountId,
         deposit_records: StorageHashMap<AccountId, Balance>,
@@ -42,7 +43,7 @@ mod distributor {
         pub fn new( cash_address:AccountId,
                     a_usd_address: AccountId) -> Self {
             let cash: Asset = FromAccountId::from_account_id(cash_address);
-            let a_usd: Asset = FromAccountId::from_account_id(a_usd_address);
+            let a_usd: TokenStub = FromAccountId::from_account_id(a_usd_address);
             let sender = Self::env().caller();
 
             let instance = Self {
