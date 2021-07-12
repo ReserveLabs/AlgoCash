@@ -13,6 +13,7 @@ ink_lang = { version = "3.0.0-rc3", git = "https://github.com/paritytech/ink", d
 ink_prelude = { version = "3.0.0-rc3", git = "https://github.com/paritytech/ink", default-features = false }
 
 asset = { version = "0.1.0", path = "../asset", default-features = false, features = ["ink-as-dependency"]  }
+tokenstub = { version = "0.1.0", path = "../tokenstub", default-features = false, features = ["ink-as-dependency"]  }
 
 scale = { package = "parity-scale-codec", version = "2.1", default-features = false, features = ["derive"] }
 scale-info = { version = "0.6.0", default-features = false, features = ["derive"], optional = true }
@@ -42,5 +43,6 @@ std = [
     "scale-info/std",
 
     "asset/std",
+    "tokenstub/std",
 ]
 ink-as-dependency = []
