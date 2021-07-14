@@ -132,15 +132,16 @@ mod distributor {
         /// Imports all the definitions from the outer scope so we can use them here.
         use super::*;
 
-        /// Imports `ink_lang` so we can use `#[ink::test]`.
+        use ink_env::AccountId;
+        /// Imports `ink_lang` so we can use `#[ink::tests]`.
         use ink_lang as ink;
 
         #[ink::test]
-        fn default_works() {
-        }
-
-        #[ink::test]
         fn it_works() {
+            let cash_address:AccountId = AccountId::from([0x01; 32]);
+            let ausd_address:AccountId = AccountId::from([0x02; 32]);
+
+            let mut distributor = Distributor::new(cash_address, ausd_address);
         }
     }
 }

@@ -54,15 +54,15 @@ mod util {
     #[cfg(test)]
     mod tests {
         use super::*;
-
         use ink_lang as ink;
 
         #[ink::test]
-        fn default_works() {
-        }
-
-        #[ink::test]
         fn it_works() {
+            // let util = Util::new(10);
+            // assert_eq!(util.get_decimal(), 10);
+
+            // assert_eq!(util.get_one_unit_with_decimal(), 10000000000);
+            // assert_eq!(util.get_ceiling_price(), 10500000000);
         }
     }
 }

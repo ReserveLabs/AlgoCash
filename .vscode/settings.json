@@ -1,0 +1,11 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "./contracts/asset/Cargo.toml",
+    "./contracts/boardroom/Cargo.toml",
+    "./contracts/distributor/Cargo.toml",
+    "./contracts/oracle/Cargo.toml",
+    "./contracts/tokenstub/Cargo.toml",
+    "./contracts/treasury/Cargo.toml",
+    "./contracts/util/Cargo.toml"
+  ]
+}
