@@ -20,13 +20,10 @@ describe("ERC20", () => {
 
         const signerAddresses = await getAddresses();
         const Alice = signerAddresses[0];
-        const Bob = signerAddresses[2];
-        const Dave = signerAddresses[5];
-        const Eve = signerAddresses[6];
+        const Bob = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"; // Bob Address
+        const Dave = "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy"; // Dave Address
 
-        const sender = await getRandomSigner(Alice, "100000000000000");
-
-        const alcFactory = await getContractFactory("asset", sender.address);
+        const alcFactory = await getContractFactory('asset', Alice);
         const tsForAlc = (new Date().getTime()).toString();
         const alc = await alcFactory.deploy('new', '0', 'ALC', 'ALC', '10', {
             gasLimit: "400000000000",
@@ -34,7 +31,7 @@ describe("ERC20", () => {
             salt: tsForAlc
         });
 
-        const ausdFactory = await getContractFactory("asset", sender.address);
+        const ausdFactory = await getContractFactory("asset", Alice);
         const tsForAusd = (new Date().getTime()).toString();
         const ausd = await ausdFactory.deploy('new', '0', 'AUSD', 'AUSD', '10', {
             gasLimit: "400000000000",
@@ -42,59 +39,62 @@ describe("ERC20", () => {
             salt: tsForAusd
         });
 
-        const distributorFactory = await getContractFactory("distributor", sender.address);
+        const distributorFactory = await getContractFactory("distributor", Alice);
         const distributor = await distributorFactory.deploy("new", alc.address, ausd.address);
 
-        const assetAbi = artifacts.readArtifact("asset");
-        const distributorAbi = artifacts.readArtifact("distributor");
-        
-        const receiver = await getRandomSigner();
+        api.tx.balances.transfer(Dave, '10000000000')
 
-        return { sender, alcFactory, ausdFactory, distributorFactory, alc, ausd, distributor, assetAbi, distributorAbi, receiver, Alice, Bob, Dave, Eve };
+        return { Alice, Bob, Dave, alc, ausd, distributor };
     }
 
     it("Distributor operator", async () => {
-        const { distributor, Alice } = await setup();
-        const result = await distributor.query.operator();
-        expect(result.output).to.equal(Alice);
-    });
+        console.log("begin test");
+        const { Alice, Bob, Dave, alc, ausd, distributor } = await setup();
+        const decimal = 10000000000;    
+        await ausd.tx.mint(Bob, 100*decimal);
+        await ausd.tx.mint(Dave, 100*decimal);
 
-    it("Transfer operator account to Bob", async () => {
-        const { distributor, Alice, Bob } = await setup();
+        const bob_result = await ausd.query.balanceOf(Bob);
+        expect(bob_result.output).to.equal(100*decimal);
 
-        await expect(() =>
-            distributor.tx.transferOperator(Bob)
-        ).to.changeTokenBalance(contract, receiver, 7);
+        const dave_result = await ausd.query.balanceOf(Dave);
+        expect(dave_result.output).to.equal(100*decimal);
+    
+        await alc.mint(distributor.address, 10000*decimal);
+        const distributor_balance_result = await alc.query.balanceOf(distributor.address);
+        expect(distributor_balance_result.output).to.equal(10000*decimal);
 
-        await expect(() =>
-            contract.tx.transfer(receiver.address, 7)
-        ).to.changeTokenBalances(contract, [contract.signer, receiver], [-7, 7]);
-    });
+        const ausd_bob = ausd.connect(Bob);
+        await ausd_bob.tx.approve(distributor.address, 100*decimal);
 
-    it("Transfer emits event", async () => {
-        const { contract, sender, receiver } = await setup();
+        const ausd_dave = ausd_bob.connect(Dave);
+        await ausd.tx.approve(distributor.address, 100*decimal);    
+        
+        console.log("bob deposit");
+        await distributor.tx.deposit(Bob, 100*decimal);
+        console.log("after bob deposit");
+        const bob_ausd_result = await ausd.query.balanceOf(Bob);
+        console.log("after bob deposit2");
+        expect(bob_ausd_result.output).to.equal(0);
 
-        await expect(contract.tx.transfer(receiver.address, 7))
-            .to.emit(contract, "Transfer")
-            .withArgs(sender.address, receiver.address, 7);
-    });
+        console.log("dave deposit");
+        await distributor.tx.deposit(Dave, 100*decimal);
+        const dave_ausd_result = await ausd.query.balanceOf(Dave);
+        expect(dave_ausd_result.output).to.equal(0);   
 
-    it("Can not transfer above the amount", async () => {
-        const { contract, receiver } = await setup();
+        const distributor_result = await ausd.query.balanceOf(distributor.address);
+        expect(distributor_result.output).to.equal(200*decimal);
 
-        await expect(contract.tx.transfer(receiver.address, 1007)).to.not.emit(
-            contract,
-            "Transfer"
-        );
-    });
+        console.log("distribute  Alc");
+        await distributor.tx.distributeAlc([{user:Bob, amount:500*decimal}, {user:Dave, amount:500*decimal}]);
 
-    it("Can not transfer from empty account", async () => {
-        const { contract, Alice, sender } = await setup();
+        const bob_alc_result = await alc.query.balanceOf(Bob);
+        expect(bob_alc_result.output).to.equal(500*decimal);
 
-        const emptyAccount = await getRandomSigner(Alice, "10 UNIT");
+        const dave_alc_result = await alc.query.balanceOf(Dave);
+        expect(dave_alc_result.output).to.equal(500*decimal);
 
-        await expect(
-            contract.connect(emptyAccount).tx.transfer(sender.address, 7)
-        ).to.not.emit(contract, "Transfer");
+        const distributor_alc_result = await alc.query.balanceOf(distributor.address);
+        expect(distributor_alc_result.output).to.equal(9000*decimal);
     });
 });

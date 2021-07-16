@@ -68,7 +68,7 @@ mod distributor {
 
         fn _distribute_alc(&mut self, user:AccountId, amount:Balance) {
             let this = self.env().account_id();
-            let balance: u128 = self.cash.balance_of(this);
+            let balance: Balance = self.cash.balance_of(this);
             assert!(balance >= amount, "Distributor: _distribute_alc err");
 
             let ret:bool = self.cash.transfer(user, amount).is_ok();
@@ -88,15 +88,17 @@ mod distributor {
 
         #[ink(message)]
         pub fn deposit(&mut self, user:AccountId, amount:Balance) {
+            self._only_operator();
+
             assert!(user != AccountId::from([0; 32]), "Distributor: deposit err");
             assert!(amount > 0, "Distributor: deposit err");
 
-            let balance: u128 = self.a_usd.balance_of(user);
+            let balance: Balance = self.a_usd.balance_of(user);
             assert!(balance >= amount, "Distributor: deposit err");
 
             let this = self.env().account_id();
             let ret: bool = self.a_usd.transfer_from(user, this, amount).is_ok();
-            assert!(!ret, "Distributor: deposit err");
+            assert!(ret, "Distributor: deposit err");
 
             self._upsert_deposit_record(user, amount);
         }
