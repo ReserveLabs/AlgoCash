@@ -38,6 +38,28 @@ mod distributor {
         deposit_records: StorageHashMap<AccountId, Balance>,
     }
 
+    #[ink(event)]
+    pub struct Deposited {
+        #[ink(topic)]
+        user: Option<AccountId>,
+        #[ink(topic)]
+        amount: u128,
+    }
+
+    #[ink(event)]
+    pub struct Distributed {
+        #[ink(topic)]
+        user: Option<AccountId>,
+        #[ink(topic)]
+        amount: u128,
+    }
+
+    #[ink(event)]
+    pub struct DistributedAccountAmount {
+        #[ink(topic)]
+        amount: u32,
+    }
+
     impl Distributor {
         #[ink(constructor)]
         pub fn new( cash_address:AccountId,
@@ -68,11 +90,16 @@ mod distributor {
 
         fn _distribute_alc(&mut self, user:AccountId, amount:Balance) {
             let this = self.env().account_id();
-            let balance: u128 = self.cash.balance_of(this);
+            let balance: Balance = self.cash.balance_of(this);
             assert!(balance >= amount, "Distributor: _distribute_alc err");
 
             let ret:bool = self.cash.transfer(user, amount).is_ok();
             assert!(ret, "Distributor: _distribute_alc err");
+
+            self.env().emit_event(Deposited {
+                user: Some(user),
+                amount,
+            });
         }
 
         #[ink(message)]
@@ -88,22 +115,32 @@ mod distributor {
 
         #[ink(message)]
         pub fn deposit(&mut self, user:AccountId, amount:Balance) {
+            self._only_operator();
+
             assert!(user != AccountId::from([0; 32]), "Distributor: deposit err");
             assert!(amount > 0, "Distributor: deposit err");
 
-            let balance: u128 = self.a_usd.balance_of(user);
+            let balance: Balance = self.a_usd.balance_of(user);
             assert!(balance >= amount, "Distributor: deposit err");
 
             let this = self.env().account_id();
             let ret: bool = self.a_usd.transfer_from(user, this, amount).is_ok();
-            assert!(!ret, "Distributor: deposit err");
+            assert!(ret, "Distributor: deposit err");
 
             self._upsert_deposit_record(user, amount);
+
+            self.env().emit_event(Deposited {
+                user: Some(user),
+                amount,
+            });
         }
 
         #[ink(message)]
         pub fn distribute_alc(&mut self, records:Vec<Record>) {
             self._only_operator();
+
+            let a: usize = records.len();
+            assert!(a > 0, "Distributor: distribute_alc err");
 
             for r in records {
                 assert!(r.user != AccountId::from([0; 32]), "Distributor: distribute_alc err");
@@ -111,6 +148,10 @@ mod distributor {
 
                 self._distribute_alc(r.user, r.amount);
             }
+        
+            self.env().emit_event(DistributedAccountAmount {
+                amount: a as u32,
+            });
         }
 
         #[ink(message)]
