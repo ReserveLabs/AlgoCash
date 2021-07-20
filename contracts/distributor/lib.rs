@@ -179,10 +179,6 @@ mod distributor {
 
         #[ink::test]
         fn it_works() {
-            let cash_address:AccountId = AccountId::from([0x01; 32]);
-            let ausd_address:AccountId = AccountId::from([0x02; 32]);
-
-            let mut distributor = Distributor::new(cash_address, ausd_address);
         }
     }
 }

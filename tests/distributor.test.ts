@@ -6,7 +6,6 @@ const { getContractFactory, getRandomSigner } = patract;
 const { api, getAddresses, getSigners } = network;
 
 // BOB: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
-// BOB_STASH: 5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc
 
 describe("ERC20", () => {
     after(() => {
@@ -19,7 +18,6 @@ describe("ERC20", () => {
         const signerAddresses = await getAddresses();
         const Alice = signerAddresses[0];
         const Bob = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"; // Bob Address
-        const Bob_Stash = "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc"; // Bob_Stash Address
         
         const alcFactory = await getContractFactory('asset', Alice);
         const tsForAlc = (new Date().getTime()).toString();
@@ -40,12 +38,12 @@ describe("ERC20", () => {
         const distributorFactory = await getContractFactory("distributor", Alice);
         const distributor = await distributorFactory.deploy("new", alc.address, ausd.address);
 
-        return { Alice, Bob, Bob_Stash, alc, ausd, distributor };
+        return { Alice, Bob, alc, ausd, distributor };
     }
 
     it("Distributor operator", async () => {
         console.log("begin test");
-        const { Alice, Bob, Bob_Stash, alc, ausd, distributor } = await setup();
+        const { Alice, Bob, alc, ausd, distributor } = await setup();
         const decimal = 10000000000;    
         await ausd.tx.mint(Alice, 100*decimal);
         await ausd.tx.mint(Bob, 100*decimal);

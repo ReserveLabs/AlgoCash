@@ -147,38 +147,28 @@ mod treasury {
 
         #[ink(message)]
         pub fn buy_bonds(&mut self, amount: u128, target_price: u128) {
-            debug_println!("enter buy_bonds");
             self._check_operator();
             self._check_same_sender_rented();
             assert!(amount > 0, "Treasure: cannot purchase bonds with zero amount");
 
             let cash_price:u128 = self.oracle.get_cash_price();
 
-            ink_env::debug_println!("cash_price is: {}", cash_price);
-
             assert!(cash_price <= target_price, "Treasure: cash price moved");
 
             let cash_price_one = self.util.get_one_unit_with_decimal();
             assert!(cash_price < cash_price_one, "Treasure: cash_price not eligible for bond purchase");
 
-            debug_println!("cash_price is valid");
-
             self._update_conversion_limit(cash_price);
-
-            debug_println!("cash_price is valid2");
 
             let mul_value = self.bond_cap.checked_mul(cash_price).expect("");
 
-            let decimal = self.util.get_decimal();
-            let div_value = mul_value.checked_div(decimal.into()).expect("");
+            let one_unit_with_decimal = self.util.get_one_unit_with_decimal();
+            let div_value = mul_value.checked_div(one_unit_with_decimal).expect("");
             let amount = self.util.math_min(amount, div_value);
 
-            ink_env::debug_println!("amount is: {}", amount);
-
             assert!(amount > 0, "Treasure: amount exceeds bond cap");
-            debug_println!("amount > 0");
 
-            let mul_value = amount.checked_mul(decimal.into()).expect("");
+            let mul_value = amount.checked_mul(one_unit_with_decimal).expect("");
             let div_value = mul_value.checked_div(cash_price).expect("");
 
             let sender = Self::env().caller();
@@ -187,20 +177,15 @@ mod treasury {
 
             let mint:bool = self.bond.mint(sender, div_value).is_ok();
             assert!(mint, "Treasure: mint ok");
-
-            debug_println!("transfer is over");
-
             self.env().emit_event(BoughtBonds {
                 from: Some(sender),
                 amount,
             });
             self._update_sender_rented_status();
-            debug_println!("leave buy_bonds");
         }
 
         #[ink(message)]
         pub fn redeem_bonds(&mut self, amount: u128) {
-            debug_println!("enter redeem_bonds");
             self._check_operator();
             self._check_same_sender_rented();
             assert!(amount > 0, "Treasure: cannot redeem bonds with zero amount");
@@ -209,12 +194,8 @@ mod treasury {
             let ceiling_price:u128 = self.util.get_ceiling_price();
             assert!(cash_price > ceiling_price, "Treasure: cashPrice not eligible for bond purchase");
 
-            debug_println!("cash_price > ceiling_price");
-
             let b: u128 = self._cash_balance_of_this();
             assert!(b >= amount, "Treasure: treasury has no more budget");
-
-            debug_println!("b >= amount");
 
             let sub_value = self.accumulated_seigniorage.checked_sub(self.util.math_min(self.accumulated_seigniorage, amount)).expect("");
             self.accumulated_seigniorage = sub_value;
@@ -232,7 +213,6 @@ mod treasury {
                 amount,
             });
             self._update_sender_rented_status();
-            debug_println!("leave redeem_bonds");
         }
 
         #[ink(message)]
