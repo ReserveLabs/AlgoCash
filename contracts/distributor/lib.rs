@@ -95,6 +95,8 @@ mod distributor {
 
             let ret:bool = self.cash.transfer(user, amount).is_ok();
             assert!(ret, "Distributor: _distribute_alc err");
+            
+            self.deposit_records.take(&user);    
 
             self.env().emit_event(Deposited {
                 user: Some(user),
@@ -114,10 +116,9 @@ mod distributor {
         }
 
         #[ink(message)]
-        pub fn deposit(&mut self, user:AccountId, amount:Balance) {
-            self._only_operator();
-
-            assert!(user != AccountId::from([0; 32]), "Distributor: deposit err");
+        pub fn deposit_token(&mut self, amount:Balance) {
+            let user:AccountId = self.env().caller();
+            assert!(user != AccountId::from([0; 32]), "Distributor: distribute_alc err");
             assert!(amount > 0, "Distributor: deposit err");
 
             let balance: Balance = self.a_usd.balance_of(user);
@@ -132,6 +133,22 @@ mod distributor {
             self.env().emit_event(Deposited {
                 user: Some(user),
                 amount,
+            });
+        }
+
+        #[ink(message, payable)]
+        pub fn deposit_coin(&mut self) {
+            let caller = self.env().caller();
+            assert!(caller != AccountId::from([0; 32]), "Distributor: distribute_alc err");
+
+            let value = self.env().transferred_balance();
+            assert!(value > 0, "Distributor: deposit coin err");
+
+            self._upsert_deposit_record(caller, value);
+
+            self.env().emit_event(Deposited {
+                user: Some(caller),
+                amount: value,
             });
         }
 

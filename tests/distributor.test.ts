@@ -41,7 +41,7 @@ describe("ERC20", () => {
         return { Alice, Bob, alc, ausd, distributor };
     }
 
-    it("Distributor operator", async () => {
+    it("Distributor deposit ausd", async () => {
         console.log("begin test");
         const { Alice, Bob, alc, ausd, distributor } = await setup();
         const decimal = 10000000000;    
@@ -64,13 +64,14 @@ describe("ERC20", () => {
         await ausd_bob.tx.approve(distributor.address, 100*decimal);
 
         console.log("alice deposit");
-        await distributor.tx.deposit(Alice, 100*decimal);
+        await distributor.tx.depositToken(100*decimal);
         console.log("alice deposit finished");
         const alice_ausd_result = await ausd.query.balanceOf(Alice);
         expect(alice_ausd_result.output).to.equal(0);
 
         console.log("bob deposit");
-        await distributor.tx.deposit(Bob, 100*decimal);
+        const distributor_bob = distributor.connect(Bob);
+        await distributor_bob.tx.depositToken(100*decimal);
         console.log("bob deposit finished");
         const bob_ausd_result = await ausd.query.balanceOf(Bob);
         expect(bob_ausd_result.output).to.equal(0);
