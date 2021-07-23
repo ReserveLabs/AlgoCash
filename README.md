@@ -53,8 +53,8 @@ However, if the Treasury has a balance of below 1,000 Algo Cash, then it is assu
 1: npx redspot run scripts/deploy.ts
 
 ### test
-1: npx redspot test tests/distributor.test.ts
-2: npx redspot test tests/boardroom.test.ts
+1: npx redspot test tests/distributor.test.ts   
+2: npx redspot test tests/boardroom.test.ts   
 3: npx redspot test tests/treasury.test.ts
 
 
