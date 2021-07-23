@@ -33,8 +33,17 @@ The Boardroom allows Algo Share holders to claim excess Algo Cash minted by the 
 In Polkadotjs-ui, use uplaod & deploy to deploy the asset, oracle and treasure contacts. With asset contract, we can create Cash (ALC) and Bond (ALB) token instance. In treasure contract, we set ALC, ALB, oracle and decimal (10000000000) as paras. 
 
 ## Usage
-1:  git clone https://github.com/ReserveLabs/AlgoCash.git   
+### compile
+1:  git clone https://github.com/ReserveLabs/AlgoCash.git
+2:  cd AlgoCash
 2:  npm install   
 3:  npx redspot compile
 
+### deploy
+1: npx redspot run scripts/deploy.ts
+
+### test
+1: npx redspot test tests/distributor.test.ts
+2: npx redspot test tests/boardroom.test.ts
+3: npx redspot test tests/treasury.test.ts
 
