@@ -43,7 +43,7 @@ In Polkadotjs-ui, use uplaod & deploy to deploy the asset, oracle and treasure c
 1: npx redspot run scripts/deploy.ts
 
 ### test
-1: npx redspot test tests/distributor.test.ts
-2: npx redspot test tests/boardroom.test.ts
+1: npx redspot test tests/distributor.test.ts   
+2: npx redspot test tests/boardroom.test.ts   
 3: npx redspot test tests/treasury.test.ts
 
