@@ -81,7 +81,7 @@ describe("treasury", () => {
     it("buy and redeem bonds", async () => {
         const { Alice, alc, alb, als, oracle, boardroom, treasury } = await setup();
 
-        const decimal = 10000000000;    
+        const decimal = 10000000000;
 
         console.log("mint alc to treasury: ", treasury.address.toString());
         await alc.tx.mint(treasury.address, 10000*decimal);
