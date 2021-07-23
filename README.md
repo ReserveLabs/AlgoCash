@@ -43,9 +43,18 @@ If the Treasury has a balance above 1,000 Algo Cash, then it is logical to assum
 However, if the Treasury has a balance of below 1,000 Algo Cash, then it is assumed that there will be additional demand for bond-to-cash redemption. Therefore, the issued Algo Cash is routed to the Treasury so that Bond holders can exercise redemptions.
 
 ## Usage
-1:  git clone https://github.com/ReserveLabs/AlgoCash.git   
+### compile
+1:  git clone https://github.com/ReserveLabs/AlgoCash.git
+2:  cd AlgoCash
 2:  npm install   
 3:  npx redspot compile
 
+### deploy
+1: npx redspot run scripts/deploy.ts
+
+### test
+1: npx redspot test tests/distributor.test.ts
+2: npx redspot test tests/boardroom.test.ts
+3: npx redspot test tests/treasury.test.ts
 
 
