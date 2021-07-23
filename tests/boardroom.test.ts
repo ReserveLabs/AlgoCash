@@ -76,48 +76,67 @@ describe("boardroom", () => {
         return { Alice, Bob, alc, alb, als, oracle, boardroom, treasury };
     }
 
-    // it("Assigns initial balance", async () => {
-    //     const { contract, sender } = await setup();
-    //     const result = await contract.query.balanceOf(sender.address);
-    //     expect(result.output).to.equal(1000);
-    // });
+    it("Stake als, mint alc, withdraw als, claim alc reward", async () => {
+        const { Alice, Bob, alc, alb, als, oracle, boardroom, treasury } = await setup();
+        
+        const decimal = 10000000000;
 
-    // it("Transfer adds amount to destination account", async () => {
-    //     const { contract, receiver } = await setup();
+        console.log("mint als to alice");
+        await als.tx.mint(Alice, 100*decimal);
+        await als.tx.approve(boardroom.address, 100*decimal);
+        const alice_als_allowance = await als.query.allowance(Alice, boardroom.address);
+        expect(alice_als_allowance.output).to.equal(100*decimal);
 
-    //     await expect(() =>
-    //         contract.tx.transfer(receiver.address, 7)
-    //     ).to.changeTokenBalance(contract, receiver, 7);
+        console.log("mint alc to treasury");
+        await alc.tx.mint(treasury.address, 10000*decimal);
+        const treasury_alc_balance = await alc.query.balanceOf(treasury.address);
+        expect(treasury_alc_balance.output).to.equal(10000*decimal);
 
-    //     await expect(() =>
-    //         contract.tx.transfer(receiver.address, 7)
-    //     ).to.changeTokenBalances(contract, [contract.signer, receiver], [-7, 7]);
-    // });
+        console.log("transfer operator for alc");
+        await alc.tx.transferOperator(treasury.address);
+        const alc_operator = await alc.query.operator();
+        expect(alc_operator.output).to.equal(treasury.address);
 
-    // it("Transfer emits event", async () => {
-    //     const { contract, sender, receiver } = await setup();
+        console.log("transfer operator for alb");
+        await alb.tx.transferOperator(treasury.address);
+        const alb_operator = await alb.query.operator();
+        expect(alb_operator.output).to.equal(treasury.address);
 
-    //     await expect(contract.tx.transfer(receiver.address, 7))
-    //         .to.emit(contract, "Transfer")
-    //         .withArgs(sender.address, receiver.address, 7);
-    // });
+        console.log("transfer operator for als");
+        await als.tx.transferOperator(treasury.address);
+        const als_operator = await als.query.operator();
+        expect(als_operator.output).to.equal(treasury.address);
 
-    // it("Can not transfer above the amount", async () => {
-    //     const { contract, receiver } = await setup();
+        console.log("transfer operator for boardroom");
+        await boardroom.tx.transferOperator(treasury.address);
+        const boardroom_operator = await boardroom.query.operator();
+        expect(boardroom_operator.output).to.equal(treasury.address);
 
-    //     await expect(contract.tx.transfer(receiver.address, 1007)).to.not.emit(
-    //         contract,
-    //         "Transfer"
-    //     );
-    // });
+        console.log("alice stake als");
+        await boardroom.tx.stake(100*decimal);    
+        const alice_als_stake_balance = await als.query.balanceOf(Alice);
+        expect(alice_als_stake_balance.output).to.equal(0);
+        const boardroom_alc_stake_balance = await als.query.balanceOf(boardroom.address);
+        expect(boardroom_alc_stake_balance.output).to.equal(100*decimal);
 
-    // it("Can not transfer from empty account", async () => {
-    //     const { contract, Alice, sender } = await setup();
+        console.log("update cash price to 1.1");
+        await oracle.tx.updateCashPrice(11000000000, 123);
+        const b_price = await oracle.query.getCashPrice();
+        expect(b_price.output).to.equal(11000000000);
 
-    //     const emptyAccount = await getRandomSigner(Alice, "10 UNIT");
+        console.log("allocate seigniorage");
+        await treasury.tx.allocateSeigniorage();
 
-    //     await expect(
-    //         contract.connect(emptyAccount).tx.transfer(sender.address, 7)
-    //     ).to.not.emit(contract, "Transfer");
-    // });
+        console.log("withdraw als");
+        await boardroom.tx.withdraw(100*decimal); 
+        const alice_als_balance = await als.query.balanceOf(Alice);
+        expect(alice_als_balance.output).to.equal(100*decimal);
+        const boardroom_als_balance = await als.query.balanceOf(boardroom.address);
+        expect(boardroom_als_balance.output).to.equal(0);
+
+        console.log("claim reward: alc");
+        await boardroom.tx.claimReward(); 
+        const alice_alc_balance = await alc.query.balanceOf(Alice);
+        expect(alice_alc_balance.output).to.equal(1000*decimal);
+    });
 });

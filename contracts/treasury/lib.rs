@@ -229,6 +229,8 @@ mod treasury {
             let seigniorage_mul:u128 = self._circulating_supply().checked_mul(percentage).expect("");
             let seigniorage:u128 = seigniorage_mul.checked_div(cash_price_one).expect("");
 
+            assert!(seigniorage > 0, "seigniorage should above 0");    
+
             let this = self.env().account_id();
             let mint_ret:bool = self.cash.mint(this, seigniorage).is_ok();
             assert!(mint_ret, "Treasury: allocate_seigniorage mint err");

@@ -5,6 +5,10 @@ use ink_lang as ink;
 
 #[ink::contract]
 mod boardroom {
+    use ink_prelude::{
+        vec::Vec,
+    };
+
     use ink_storage::{
         collections::{
             HashMap as StorageHashMap,
@@ -13,7 +17,7 @@ mod boardroom {
         lazy::Lazy,
         traits::{PackedLayout, SpreadLayout},
     };
-
+    
     use ink_env::call::FromAccountId;
     use ink_env::debug_println;
     use core::convert::TryInto;
@@ -69,7 +73,7 @@ mod boardroom {
         derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
     )]
     pub struct BoardSnapshot {
-        pub time: u32,
+        pub time: u64,
         pub reward_received: u128,
         pub reward_per_share: u128,
     }
@@ -99,7 +103,7 @@ mod boardroom {
             let sender = Self::env().caller();
             let mut history: StorageVec<BoardSnapshot> = StorageVec::new();
             let genesis = BoardSnapshot {
-                time: Self::env().block_number(),
+                time: Self::env().block_timestamp(),
                 reward_received: 0,
                 reward_per_share: 0,
             };
@@ -162,6 +166,33 @@ mod boardroom {
             return ret;
         }
 
+        #[ink(message)]
+        pub fn get_snapshots(&self) -> Vec<BoardSnapshot> {
+            let mut records:Vec<BoardSnapshot> = Vec::new();
+            for history in self.board_history.iter() {
+                let r = BoardSnapshot {
+                    time: history.time,
+                    reward_received: history.reward_received,
+                    reward_per_share: history.reward_per_share,
+                };
+                records.push(r);
+            }
+            return records;
+        }
+
+        #[ink(message)]
+        pub fn get_seats(&self) -> Vec<BoardSeat> {
+            let mut records:Vec<BoardSeat> = Vec::new();
+            for (_, value) in self.directors.iter() {
+                let r = BoardSeat {
+                    last_snapshot_index: value.last_snapshot_index,
+                    reward_earned: value.reward_earned,
+                };
+                records.push(r);
+            }
+            return records;
+        }
+
         fn _get_latest_snapshot(&self) -> BoardSnapshot {
             let index = self.latest_snapshot_index();
             return self.board_history[index.try_into().unwrap()].clone();
@@ -179,10 +210,11 @@ mod boardroom {
             }
         }
 
-        fn _get_director_board_seat(&self, account: AccountId) -> Option<BoardSeat> {
-            let r = self._build_empty_board_seat();
+        #[ink(message)]
+        pub fn _get_director_board_seat(&self, account: AccountId) -> Option<BoardSeat> {
             let exist = self.directors.contains_key(&account);
             if !exist {
+                let r = self._build_empty_board_seat();
                 return Some(r)
             }
 
@@ -190,6 +222,15 @@ mod boardroom {
         }
 
         fn _update_seat(&mut self, account: AccountId, earned: u128, snap_shot_index: u128) {
+            let exist = self.directors.contains_key(&account);
+            if !exist {
+                let mut r = self._build_empty_board_seat();
+                r.reward_earned = earned;
+                r.last_snapshot_index = snap_shot_index;
+                self.directors.insert(account, r);
+                return;
+            }
+
             if let Some(seat) = self.directors.get_mut(&account) {
                 seat.reward_earned = earned;
                 seat.last_snapshot_index = snap_shot_index;
@@ -344,7 +385,7 @@ mod boardroom {
             let next_rps: u128 = prev_rps.checked_add(amount_mul_div).expect("");
 
             let snapshot = BoardSnapshot {
-                time: Self::env().block_number(),
+                time: Self::env().block_timestamp(),
                 reward_received: amount,
                 reward_per_share: next_rps,
             };
