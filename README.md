@@ -44,10 +44,10 @@ However, if the Treasury has a balance of below 1,000 Algo Cash, then it is assu
 
 ## Usage
 ### compile
-1:  git clone https://github.com/ReserveLabs/AlgoCash.git
-2:  cd AlgoCash
-2:  npm install   
-3:  npx redspot compile
+1:  git clone https://github.com/ReserveLabs/AlgoCash.git   
+2:  cd AlgoCash   
+2:  npm install      
+3:  npx redspot compile   
 
 ### deploy
 1: npx redspot run scripts/deploy.ts
