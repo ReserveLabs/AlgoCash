@@ -34,10 +34,10 @@ In Polkadotjs-ui, use uplaod & deploy to deploy the asset, oracle and treasure c
 
 ## Usage
 ### compile
-1:  git clone https://github.com/ReserveLabs/AlgoCash.git
-2:  cd AlgoCash
-2:  npm install   
-3:  npx redspot compile
+1:  git clone https://github.com/ReserveLabs/AlgoCash.git   
+2:  cd AlgoCash   
+2:  npm install      
+3:  npx redspot compile   
 
 ### deploy
 1: npx redspot run scripts/deploy.ts
