@@ -63,7 +63,7 @@ rustup target add wasm32-unknown-unknown --toolchain nightly
 Ubuntu/Debian:   
 sudo apt install binaryen  
 
-macOS:
+macOS:   
 brew install binaryen   
 
 ##### cargo-contract
