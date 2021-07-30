@@ -33,6 +33,42 @@ The Boardroom allows Algo Share holders to claim excess Algo Cash minted by the 
 In Polkadotjs-ui, use uplaod & deploy to deploy the asset, oracle and treasure contacts. With asset contract, we can create Cash (ALC) and Bond (ALB) token instance. In treasure contract, we set ALC, ALB, oracle and decimal (10000000000) as paras. 
 
 ## Usage
+### Build Dependencies
+Ubuntu/Debian:   
+sudo apt update   
+sudo apt install -y git clang curl libssl-dev llvm libudev-dev   
+
+macOS:      
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"   
+brew update   
+brew install openssl   
+
+### Rust Developer Environment
+#### Automated getsubstrate.io Script   
+curl https://getsubstrate.io -sSf | bash -s -- --fast
+
+#### Manual Rust Configuration      
+curl https://sh.rustup.rs -sSf | sh   
+source ~/.cargo/env   
+
+rustup default stable   
+rustup update   
+rustup update nightly   
+
+rustup component add rust-src --toolchain nightly   
+rustup target add wasm32-unknown-unknown --toolchain nightly   
+
+#### ink!
+##### install binaryen
+Ubuntu/Debian:   
+sudo apt install binaryen  
+
+macOS:
+brew install binaryen   
+
+##### cargo-contract
+cargo install --force cargo-contract
+
 ### compile
 1:  git clone https://github.com/ReserveLabs/AlgoCash.git   
 2:  cd AlgoCash   
