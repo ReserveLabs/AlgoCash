@@ -54,7 +54,9 @@ source ~/.cargo/env
 rustup default stable   
 rustup update   
 rustup update nightly   
+rustup target add wasm32-unknown-unknown --toolchain nightly
 
+#### toolchain
 rustup component add rust-src --toolchain nightly   
 rustup target add wasm32-unknown-unknown --toolchain nightly   
 
