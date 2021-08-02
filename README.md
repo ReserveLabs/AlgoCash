@@ -106,6 +106,9 @@ docker exec -it europa-node bash
 cd github/AlgoCash/
 
 test cases:
+
 1: npx redspot test tests/distributor.test.ts
+
 2: npx redspot test tests/boardroom.test.ts
+
 3: npx redspot test tests/treasury.test.ts
