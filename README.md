@@ -85,3 +85,13 @@ cargo install --force cargo-contract
 2: npx redspot test tests/boardroom.test.ts   
 3: npx redspot test tests/treasury.test.ts
 
+## Docker
+wget dl.veim.cn/download/algocash/europa-algocash.tar.gz
+
+gunzip europa-algocash.tar.gz
+
+docker load -i europa-algocash.tar 
+
+$ docker images
+  ｜REPOSITORY｜                   TAG｜            IMAGE ID｜       CREATED｜         SIZE
+  ｜europa-algocash｜              1.0.0｜          bc54f6339fb1｜   14 hours ago｜    4.39GB｜
