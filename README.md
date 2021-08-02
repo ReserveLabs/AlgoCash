@@ -96,4 +96,16 @@ $ docker images
 
 | REPOSITORY | TAG | IMAGE ID | CREATED |SIZE|
 | ------------- | ------------- | ------------- |------------- |------------- |
-| europa-algocash | 1.0.0 | bc54f6339fb1 14 hours ago |   4.39GB |
+| europa-algocash | 1.0.0 | bc54f6339fb1 |14 hours ago |   4.39GB |
+
+
+docker run -d --name europa-node europa-algocash:1.0.0 europa -d database
+
+docker exec -it europa-node bash
+
+cd github/AlgoCash/
+
+test cases:
+1: npx redspot test tests/distributor.test.ts
+2: npx redspot test tests/boardroom.test.ts
+3: npx redspot test tests/treasury.test.ts
