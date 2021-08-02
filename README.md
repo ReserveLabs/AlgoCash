@@ -93,5 +93,6 @@ gunzip europa-algocash.tar.gz
 docker load -i europa-algocash.tar 
 
 $ docker images
-  ｜REPOSITORY｜                   TAG｜            IMAGE ID｜       CREATED｜         SIZE
-  ｜europa-algocash｜              1.0.0｜          bc54f6339fb1｜   14 hours ago｜    4.39GB｜
+| REPOSITORY | TAG | IMAGE ID | CREATED |SIZE|
+| ------------- | ------------- | ------------- |------------- |
+｜europa-algocash｜1.0.0        ｜ bc54f6339fb1｜   14 hours ago｜    4.39GB｜
