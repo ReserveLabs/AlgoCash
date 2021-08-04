@@ -184,18 +184,4 @@ mod distributor {
             return records;
         }
     }
-
-    #[cfg(test)]
-    mod tests {
-        /// Imports all the definitions from the outer scope so we can use them here.
-        use super::*;
-
-        use ink_env::AccountId;
-        /// Imports `ink_lang` so we can use `#[ink::tests]`.
-        use ink_lang as ink;
-
-        #[ink::test]
-        fn it_works() {
-        }
-    }
 }

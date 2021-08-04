@@ -403,17 +403,4 @@ mod boardroom {
             self._update_sender_rented_status();
         }
     }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn default_works() {
-        }
-
-        #[test]
-        fn it_works() {
-        }
-    }
 }
