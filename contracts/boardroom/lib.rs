@@ -5,13 +5,11 @@ use ink_lang as ink;
 
 #[ink::contract]
 mod boardroom {
-    use ink_prelude::{
-        vec::Vec,
-    };
+    use ink_prelude::vec::Vec;
 
     use ink_storage::{
         collections::{
-            HashMap as StorageHashMap,
+            HashMap,
             Vec as StorageVec,
         },
         lazy::Lazy,
@@ -19,7 +17,6 @@ mod boardroom {
     };
     
     use ink_env::call::FromAccountId;
-    use ink_env::debug_println;
     use core::convert::TryInto;
 
     use util::Util;
@@ -84,12 +81,12 @@ mod boardroom {
         cash: Lazy<Asset>,
         share: Lazy<Asset>,
         stake_total: u128,
-        balances: StorageHashMap<AccountId, u128>,
-        directors: StorageHashMap<AccountId, BoardSeat>,
+        balances: HashMap<AccountId, u128>,
+        directors: HashMap<AccountId, BoardSeat>,
         board_history: StorageVec<BoardSnapshot>,
 
         operator: AccountId,
-        status: StorageHashMap<(u32, AccountId), bool>,
+        status: HashMap<(u32, AccountId), bool>,
     }
 
     impl Boardroom {
@@ -114,11 +111,11 @@ mod boardroom {
                 cash: Lazy::new(cash),
                 share: Lazy::new(share),
                 stake_total: 0,
-                balances: StorageHashMap::new(),
-                directors: StorageHashMap::new(),
+                balances: HashMap::new(),
+                directors: HashMap::new(),
                 board_history: history,
                 operator: sender,
-                status: StorageHashMap::new(),
+                status: HashMap::new(),
             }
         }
 
@@ -152,17 +149,17 @@ mod boardroom {
             let latest_rps: u128 = self._get_latest_snapshot().reward_per_share;
             let stored_rps: u128 = self._get_last_snapshot_of(director).reward_per_share;
 
-            let latest_rps_sub: u128 = latest_rps.checked_sub(stored_rps).expect("");
+            let latest_rps_sub: u128 = latest_rps.checked_sub(stored_rps).expect("failed at _earned the `boardroom` contract");
 
             let balance: u128 = self.balance_of(director);
-            let balance_mul: u128 = balance.checked_mul(latest_rps_sub).expect("");
+            let balance_mul: u128 = balance.checked_mul(latest_rps_sub).expect("failed at _earned the `boardroom` contract");
 
             let one_unit: u128 = self.util.get_one_unit_with_decimal();
-            let balance_mul_div: u128 = balance_mul.checked_div(one_unit).expect("");
+            let balance_mul_div: u128 = balance_mul.checked_div(one_unit).expect("failed at _earned the `boardroom` contract");
 
             let seat = self._get_director_board_seat(director).unwrap();
             let earned: u128 = seat.reward_earned;
-            let ret: u128 = balance_mul_div.checked_add(earned).expect("");
+            let ret: u128 = balance_mul_div.checked_add(earned).expect("failed at _earned the `boardroom` contract");
             return ret;
         }
 
@@ -239,11 +236,11 @@ mod boardroom {
 
         fn _stake(&mut self, amount: u128) {
             let total:u128 = self.stake_total;
-            self.stake_total = total.checked_add(amount).expect("");
+            self.stake_total = total.checked_add(amount).expect("failed at _stake the `boardroom` contract");
 
             let sender = Self::env().caller();
             let balance = self.balance_of(sender);
-            let value = balance.checked_add(amount).expect("");
+            let value = balance.checked_add(amount).expect("failed at _stake the `boardroom` contract");
             self.balances.insert(sender, value);
 
             let this = self.env().account_id();
@@ -257,10 +254,10 @@ mod boardroom {
             assert!(balance >= amount, "Boardroom: withdraw request greater than staked amount");
 
             let total:u128 = self.stake_total;
-            self.stake_total = total.checked_sub(amount).expect("");
+            self.stake_total = total.checked_sub(amount).expect("failed at _withdraw the `boardroom` contract");
 
             let balance = self.balance_of(sender);
-            let value = balance.checked_sub(amount).expect("");
+            let value = balance.checked_sub(amount).expect("failed at _withdraw the `boardroom` contract");
             self.balances.insert(sender, value);
 
             let ret:bool = self.share.transfer(sender, amount).is_ok();
@@ -380,9 +377,9 @@ mod boardroom {
 
             let one_unit_with_decimal: u128 = self.util.get_one_unit_with_decimal();
             let prev_rps: u128 = self.reward_per_share();
-            let amount_mul: u128 = amount.checked_mul(one_unit_with_decimal).expect("");
-            let amount_mul_div: u128 = amount_mul.checked_div(total).expect("");
-            let next_rps: u128 = prev_rps.checked_add(amount_mul_div).expect("");
+            let amount_mul: u128 = amount.checked_mul(one_unit_with_decimal).expect("failed at allocateSeigniorage the `boardroom` contract");
+            let amount_mul_div: u128 = amount_mul.checked_div(total).expect("failed at allocateSeigniorage the `boardroom` contract");
+            let next_rps: u128 = prev_rps.checked_add(amount_mul_div).expect("failed at allocateSeigniorage the `boardroom` contract");
 
             let snapshot = BoardSnapshot {
                 time: Self::env().block_timestamp(),

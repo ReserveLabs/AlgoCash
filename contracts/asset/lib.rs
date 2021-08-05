@@ -26,7 +26,6 @@ mod asset {
     };
 
     use ink_prelude::string::String;
-    use ink_prelude::string::ToString;
 
     /// A simple ERC-20 contract.
     #[ink(storage)]
@@ -228,7 +227,7 @@ mod asset {
                 return Err(Error::InsufficientAllowance)
             }
             self.transfer_from_to(from, to, value)?;
-            let r = allowance.checked_sub(value).expect("");
+            let r = allowance.checked_sub(value).expect("failed at transferFrom the `asset` contract");
             self.allowances.insert((from, caller), r);
             Ok(())
         }
@@ -251,10 +250,10 @@ mod asset {
             if from_balance < value {
                 return Err(Error::InsufficientBalance)
             }
-            let r = from_balance.checked_sub(value).expect("");
+            let r = from_balance.checked_sub(value).expect("failed at transferFromTo the `asset` contract");
             self.balances.insert(from, r);
             let to_balance = self.balance_of(to);
-            let ar = to_balance.checked_add(value).expect("");
+            let ar = to_balance.checked_add(value).expect("failed at transferFromTo the `asset` contract");
             self.balances.insert(to, ar);
             self.env().emit_event(Transfer {
                 from: Some(from),
@@ -276,14 +275,14 @@ mod asset {
         ) -> Result<()> {
             self._only_operator();
             let balance_before = self.balance_of(to);
-            let ar = balance_before.checked_add(value).expect("");
+            let ar = balance_before.checked_add(value).expect("failed at mint the `asset` contract");
             self.balances.insert(to, ar);
             let balance_after = self.balance_of(to);
             if balance_after < balance_before {
                 return Err(Error::InvalidValue)
             }
             let ts = self.total_supply();
-            let ar = ts.checked_add(value).expect("");
+            let ar = ts.checked_add(value).expect("failed at mint the `asset` contract");
             self.total_supply = Lazy::new(ar);
             self.env().emit_event(Transfer {
                 from: Some(self.operator),
@@ -312,11 +311,11 @@ mod asset {
                 return Err(Error::InsufficientBalance);
             }
 
-            let sr = from_balance.checked_sub(value).expect("");
+            let sr = from_balance.checked_sub(value).expect("failed at burn the `asset` contract");
             self.balances.insert(caller, sr);
 
             let ts = self.total_supply();
-            let sr = ts.checked_sub(value).expect("");
+            let sr = ts.checked_sub(value).expect("failed at burn the `asset` contract");
             self.total_supply = Lazy::new(sr);
             self.env().emit_event(Transfer {
                 from: Some(caller),
@@ -351,14 +350,14 @@ mod asset {
                 return Err(Error::InsufficientBalance);
             }
 
-            let sr = allowance.checked_sub(value).expect("");
+            let sr = allowance.checked_sub(value).expect("failed at burnFrom the `asset` contract");
             self.allowances.insert((from, caller), sr);
 
-            let sr = from_balance.checked_sub(value).expect("");
+            let sr = from_balance.checked_sub(value).expect("failed at burnFrom the `asset` contract");
             self.balances.insert(from, sr);
 
             let ts = self.total_supply();
-            let sr = ts.checked_sub(value).expect("");
+            let sr = ts.checked_sub(value).expect("failed at burnFrom the `asset` contract");
             self.total_supply = Lazy::new(sr);
             self.env().emit_event(Transfer {
                 from: Some(caller),

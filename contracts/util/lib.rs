@@ -16,7 +16,7 @@ mod util {
         #[ink(constructor)]
         pub fn new(decimal:u32) -> Self {
             let u:u128 = 10;
-            let ret:u128 = u.checked_pow(decimal).expect("");
+            let ret:u128 = u.checked_pow(decimal).expect("failed at new the `util` contract");
             Self {
                 decimal,
                 one_unit_with_decimal:ret,
@@ -35,9 +35,9 @@ mod util {
 
         #[ink(message)]
         pub fn get_ceiling_price(&self) -> u128 {
-            let r = self.one_unit_with_decimal.checked_div(100).expect("");
-            let r = r.checked_mul(5).expect("");
-            let ar = self.one_unit_with_decimal.checked_add(r).expect("");
+            let r = self.one_unit_with_decimal.checked_div(100).expect("failed at new the `getCeilingPrice` contract");
+            let r = r.checked_mul(5).expect("failed at getCeilingPrice the `util` contract");
+            let ar = self.one_unit_with_decimal.checked_add(r).expect("failed at getCeilingPrice the `util` contract");
             return ar
         }
 
