@@ -1,3 +1,17 @@
+// Copyright 2018-2021 Parity Technologies (UK) Ltd.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use self::boardroom::Boardroom;
@@ -22,6 +36,7 @@ mod boardroom {
     use util::Util;
     use asset::Asset;
 
+    /// Event emitted when a stake occurs that user Stake the ALS.
     #[ink(event)]
     pub struct Staked {
         #[ink(topic)]
@@ -30,6 +45,7 @@ mod boardroom {
         amount: u128,
     }
 
+    /// Event emitted when an withdraw occurs that user withdraw the ALS which is staked before.
     #[ink(event)]
     pub struct Withdrawn {
         #[ink(topic)]
@@ -38,6 +54,7 @@ mod boardroom {
         amount: u128,
     }
 
+    /// Event emitted when an claim_reward occurs that user claim the reward which is produced by staked ALS.
     #[ink(event)]
     pub struct RewardPaid {
         #[ink(topic)]
@@ -46,6 +63,7 @@ mod boardroom {
         reward: u128,
     }
 
+    /// Event emitted when an allocate_seigniorage occurs that treasury allocate the reward.
     #[ink(event)]
     pub struct RewardAdded {
         #[ink(topic)]
@@ -54,6 +72,8 @@ mod boardroom {
         reward: u128,
     }
 
+    /// BoardSeat record the reward should paid to user.
+    /// When treasury allocate the reward, boardroom generate the new BoardSeat for user who staked the ALS. 
     #[derive(Debug, PartialEq, Eq, Clone, scale::Encode, scale::Decode, SpreadLayout, PackedLayout)]
     #[cfg_attr(
         feature = "std",
@@ -64,6 +84,8 @@ mod boardroom {
         pub reward_earned: u128,
     }
 
+    /// BoardSnapshot record the reward per ALS.
+    /// When treasury allocate the reward, boardroom generate the new BoardSnapshot.
     #[derive(Debug, PartialEq, Eq, Clone, scale::Encode, scale::Decode, SpreadLayout, PackedLayout)]
     #[cfg_attr(
         feature = "std",
@@ -90,6 +112,7 @@ mod boardroom {
     }
 
     impl Boardroom {
+        /// Creates a new boardroom contract with the contract's addresses of ALS, ALC, util.
         #[ink(constructor)]
         pub fn new(cash_address:AccountId,
                    share_address:AccountId,
@@ -163,6 +186,7 @@ mod boardroom {
             return ret;
         }
 
+        /// Get the snapshots for the rewards.
         #[ink(message)]
         pub fn get_snapshots(&self) -> Vec<BoardSnapshot> {
             let mut records:Vec<BoardSnapshot> = Vec::new();
@@ -177,6 +201,7 @@ mod boardroom {
             return records;
         }
 
+        /// Get the everyone's rewards detail.
         #[ink(message)]
         pub fn get_seats(&self) -> Vec<BoardSeat> {
             let mut records:Vec<BoardSeat> = Vec::new();
@@ -207,8 +232,7 @@ mod boardroom {
             }
         }
 
-        #[ink(message)]
-        pub fn _get_director_board_seat(&self, account: AccountId) -> Option<BoardSeat> {
+        fn _get_director_board_seat(&self, account: AccountId) -> Option<BoardSeat> {
             let exist = self.directors.contains_key(&account);
             if !exist {
                 let r = self._build_empty_board_seat();
@@ -269,17 +293,20 @@ mod boardroom {
             assert!(self.operator == sender, "Boardroom: caller is not the operator");
         }
 
+        /// Get the operator who can operate this contract.
         #[ink(message)]
         pub fn operator(&self) -> AccountId {
             return self.operator;
         }
 
+        /// Switch the operator of this contract.
         #[ink(message)]
         pub fn transfer_operator(&mut self, new_operator:AccountId)  {
             self._only_operator();
             self.operator = new_operator;
         }
 
+        /// Get the reward(ALC) amount per ALS.
         #[ink(message)]
         pub fn reward_per_share(&self) -> u128 {
             let index = self.latest_snapshot_index();
@@ -297,47 +324,65 @@ mod boardroom {
             return len - 1;
         }
 
+        /// The total amount user stake the ALC.
         #[ink(message)]
         pub fn total_supply(&self) -> u128 {
             return self.stake_total;
         }
 
+        /// User's stake the ALS's amount.
         #[ink(message)]
         pub fn balance_of(&self, account: AccountId) -> u128 {
             return self.balances.get(&account).copied().unwrap_or(0);
         }
 
+        /// User stake the ALS for the ALC reward. 
         #[ink(message)]
         pub fn stake(&mut self, amount: u128) {
             self._check_same_sender_rented();
 
+            // Calculate the reward.
             let sender = Self::env().caller();
             self._update_reward(sender);
             assert!(amount > 0, "Boardroom: Cannot stake 0");
+
+            // Stake the ALS
             self._stake(amount);
+
+            // Emit the event.
             self.env().emit_event(Staked {
                 user: Some(sender),
                 amount,
             });
+
+            // Ensure stake once per block.
             self._update_sender_rented_status();
         }
 
+        /// Withdraw the ALS user staked.
         #[ink(message)]
         pub fn withdraw(&mut self, amount: u128) {
             self._check_same_sender_rented();
             self._director_exists();
 
+            // Calculate the ALC reward.
             let sender = Self::env().caller();
             self._update_reward(sender);
             assert!(amount > 0, "Boardroom: Cannot withdraw 0");
+
+            // Withdraw the ALS.
             self._withdraw(amount);
+
+            // Emit the event
             self.env().emit_event(Withdrawn {
                 user: Some(sender),
                 amount,
             });
+            // Ensure stake once per block.
             self._update_sender_rented_status();
         }
 
+        /// User exit system, system will return back the ALS, ALC reward.
         #[ink(message)]
         pub fn exit(&mut self) {
             let sender = Self::env().caller();
@@ -346,19 +391,23 @@ mod boardroom {
             self.claim_reward();
         }
 
+        /// User claim the ALC reward.
         #[ink(message)]
         pub fn claim_reward(&mut self) {
             let sender = Self::env().caller();
+            // Caculate the reward.
             self._update_reward(sender);
             let seat = self._get_director_board_seat(sender).unwrap();
             let reward: u128 = seat.reward_earned;
             if reward > 0 {
                 let index = seat.last_snapshot_index;
                 self._update_seat(sender, 0, index);
-
+                
+                // Return back the ALC reward to user.
                 let ret:bool = self.cash.transfer(sender, reward).is_ok();
                 assert!(ret, "Boardroom: Cannot claim_reward cash.transfer err");
 
+                // Emit the event.
                 self.env().emit_event(RewardPaid {
                     user: Some(sender),
                     reward,
@@ -366,6 +415,7 @@ mod boardroom {
             }
         }
 
+        /// Allocate the ALC reward. Called by treasury.
         #[ink(message)]
         pub fn allocate_seigniorage(&mut self, amount: u128) {
             self._only_operator();
@@ -381,6 +431,7 @@ mod boardroom {
             let amount_mul_div: u128 = amount_mul.checked_div(total).expect("failed at allocateSeigniorage the `boardroom` contract");
             let next_rps: u128 = prev_rps.checked_add(amount_mul_div).expect("failed at allocateSeigniorage the `boardroom` contract");
 
+            // Update the reward per ALS.
             let snapshot = BoardSnapshot {
                 time: Self::env().block_timestamp(),
                 reward_received: amount,
@@ -390,13 +441,17 @@ mod boardroom {
 
             let sender = Self::env().caller();
             let this = self.env().account_id();
+
+            // transfer the ALC from treasury to this.
             let ret: bool = self.cash.transfer_from(sender, this, amount).is_ok();
             assert!(ret, "Boardroom: allocate_seigniorage transfer_from is err");
 
+            // Emit the event.
             self.env().emit_event(RewardAdded {
                 user: Some(sender),
                 reward: amount,
             });
+            // Ensure stake once per block.
             self._update_sender_rented_status();
         }
     }
