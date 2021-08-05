@@ -1,3 +1,17 @@
+// Copyright 2018-2021 Parity Technologies (UK) Ltd.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use ink_lang as ink;
@@ -31,6 +45,7 @@ mod treasury {
         status: HashMap<(u32, AccountId), bool>,
     }
 
+    /// Event emitted when an redeem_bonds occurs that user redeem the ALB.
     #[ink(event)]
     pub struct RedeemedBonds {
         #[ink(topic)]
@@ -39,6 +54,7 @@ mod treasury {
         amount: u128,
     }
 
+    /// Event emitted when an buy_bonds occurs that user buy the ALB.
     #[ink(event)]
     pub struct BoughtBonds {
         #[ink(topic)]
@@ -47,6 +63,7 @@ mod treasury {
         amount: u128,
     }
 
+    /// Event emitted when an allocate_seigniorage occurs that system allocate the reward.
     #[ink(event)]
     pub struct TreasuryFunded {
         #[ink(topic)]
@@ -55,6 +72,7 @@ mod treasury {
         seigniorage: u128,
     }
 
+    /// Event emitted when an allocate_seigniorage occurs that system allocate the reward.
     #[ink(event)]
     pub struct BoardroomFunded {
         #[ink(topic)]
@@ -63,7 +81,9 @@ mod treasury {
         seigniorage: u128,
     }
 
+
     impl Treasury {
+        /// Create new treasury
         #[ink(constructor)]
         pub fn new(util_address:AccountId,
                    cash_address:AccountId,
@@ -142,19 +162,22 @@ mod treasury {
             self.status.insert((block_num, sender), true);
         }
 
+        /// If the ALC's price < $1, we assume the ALC's price is 0.9. User may buy the ALB with the ALC's current price(0.9*0.9).
+        /// When the ALC's price >= $1, user can redeem the ALB, system will transfer the ALC to user with the ALC's current price.
         #[ink(message)]
         pub fn buy_bonds(&mut self, amount: u128, target_price: u128) {
             self._check_operator();
             self._check_same_sender_rented();
-            assert!(amount > 0, "Treasure: cannot purchase bonds with zero amount");
+            assert!(amount > 0, "Treasury: cannot purchase bonds with zero amount");
 
+            // get ALC's price from oracle.
             let cash_price:u128 = self.oracle.get_cash_price();
-
-            assert!(cash_price <= target_price, "Treasure: cash price moved");
+            assert!(cash_price <= target_price, "Treasury: cash price moved");
 
             let cash_price_one = self.util.get_one_unit_with_decimal();
-            assert!(cash_price < cash_price_one, "Treasure: cash_price not eligible for bond purchase");
+            assert!(cash_price < cash_price_one, "Treasury: cash_price not eligible for bond purchase");
 
+            // Caculate the user's ALC amount which should be burnt.
             self._update_conversion_limit(cash_price);
 
             let mul_value = self.bond_cap.checked_mul(cash_price).expect("failed at buyBonds the `treasury` contract");
@@ -163,62 +186,74 @@ mod treasury {
             let div_value = mul_value.checked_div(one_unit_with_decimal).expect("failed at buyBonds the `treasury` contract");
             let amount = self.util.math_min(amount, div_value);
 
-            assert!(amount > 0, "Treasure: amount exceeds bond cap");
+            assert!(amount > 0, "Treasury: amount exceeds bond cap");
 
             let mul_value = amount.checked_mul(one_unit_with_decimal).expect("failed at buyBonds the `treasury` contract");
             let div_value = mul_value.checked_div(cash_price).expect("failed at buyBonds the `treasury` contract");
 
+            // Burn the user's ALC.
             let sender = Self::env().caller();
             let burn_ret:bool = self.cash.burn_from(sender, amount).is_ok();
-            assert!(burn_ret, "Treasure: transfer ok");
+            assert!(burn_ret, "Treasury: transfer ok");
 
+            // Mint the ALB to user.
             let mint:bool = self.bond.mint(sender, div_value).is_ok();
-            assert!(mint, "Treasure: mint ok");
+            assert!(mint, "Treasury: mint ok");
+
+            // Emit the event.
             self.env().emit_event(BoughtBonds {
                 from: Some(sender),
                 amount,
             });
+
+            // ensure only buy_bonds once per block.
             self._update_sender_rented_status();
         }
 
+        /// When the ALC's price >= $1.05, user can redeem the ALB, system will transfer the ALC to user with the ALC's current price.
         #[ink(message)]
         pub fn redeem_bonds(&mut self, amount: u128) {
             self._check_operator();
             self._check_same_sender_rented();
-            assert!(amount > 0, "Treasure: cannot redeem bonds with zero amount");
+            assert!(amount > 0, "Treasury: cannot redeem bonds with zero amount");
 
             let cash_price:u128 = self.oracle.get_cash_price();
             let ceiling_price:u128 = self.util.get_ceiling_price();
-            assert!(cash_price > ceiling_price, "Treasure: cashPrice not eligible for bond purchase");
+            assert!(cash_price > ceiling_price, "Treasury: cashPrice not eligible for bond purchase");
 
             let b: u128 = self._cash_balance_of_this();
-            assert!(b >= amount, "Treasure: treasury has no more budget");
+            assert!(b >= amount, "Treasury: treasury has no more budget");
 
             let sub_value = self.accumulated_seigniorage.checked_sub(self.util.math_min(self.accumulated_seigniorage, amount)).expect("failed at redeemBonds the `treasury` contract");
             self.accumulated_seigniorage = sub_value;
 
+            // Burn the user's ALB.
             let sender = Self::env().caller();
-
             let burn_ret: bool = self.bond.burn_from(sender, amount).is_ok();
-            assert!(burn_ret, "Treasure: transfer ok");
+            assert!(burn_ret, "Treasury: transfer ok");
 
+            // Transfer the ALC to user.
             let trans_ret: bool = self.cash.transfer(sender, amount).is_ok();
-            assert!(trans_ret, "Treasure: transfer ok");
+            assert!(trans_ret, "Treasury: transfer ok");
 
+            // Emit the event.
             self.env().emit_event(RedeemedBonds {
                 from: Some(sender),
                 amount,
             });
+
+            // ensure only redeem_bonds once per block.
             self._update_sender_rented_status();
         }
 
+        /// Allocate the ALC to boardroom, the other is the reward of user who stake the ALS.
         #[ink(message)]
         pub fn allocate_seigniorage(&mut self) {
             self._check_operator();
             self._check_same_sender_rented();
             let cash_price:u128 = self.oracle.get_cash_price();
             let ceiling_price:u128 = self.util.get_ceiling_price();
-            assert!(cash_price > ceiling_price, "Treasure: cashPrice not eligible for allocate_seigniorage");
+            assert!(cash_price > ceiling_price, "Treasury: cashPrice not eligible for allocate_seigniorage");
 
             // circulating supply
             let cash_price_one = self.util.get_one_unit_with_decimal();
@@ -228,6 +263,7 @@ mod treasury {
 
             assert!(seigniorage > 0, "seigniorage should above 0");    
 
+            // mint the ALC.
             let this = self.env().account_id();
             let mint_ret:bool = self.cash.mint(this, seigniorage).is_ok();
             assert!(mint_ret, "Treasury: allocate_seigniorage mint err");
@@ -254,6 +290,7 @@ mod treasury {
                 let ret:bool = self.cash.approve(self.room_address, boardroom_reserve).is_ok();
                 assert!(ret, "Treasury: allocate_seigniorage approve err");
 
+                // allocate the ALC as reward to user.
                 self.boardroom.allocate_seigniorage(boardroom_reserve);
                 self.env().emit_event(BoardroomFunded {
                     timestamp: Self::env().block_timestamp(),

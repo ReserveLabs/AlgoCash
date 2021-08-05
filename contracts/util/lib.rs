@@ -1,3 +1,17 @@
+// Copyright 2018-2021 Parity Technologies (UK) Ltd.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use self::util::Util;
@@ -48,21 +62,6 @@ mod util {
             }
 
             return b;
-        }
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        use ink_lang as ink;
-
-        #[ink::test]
-        fn it_works() {
-            // let util = Util::new(10);
-            // assert_eq!(util.get_decimal(), 10);
-
-            // assert_eq!(util.get_one_unit_with_decimal(), 10000000000);
-            // assert_eq!(util.get_ceiling_price(), 10500000000);
         }
     }
 }
