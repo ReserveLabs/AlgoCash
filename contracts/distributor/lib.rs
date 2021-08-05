@@ -84,7 +84,7 @@ mod distributor {
 
         fn _upsert_deposit_record(&mut self, user:AccountId, amount:Balance) {
             let b = self.deposit_records.get(&user).copied().unwrap_or(0);
-            let new_balance = b.checked_add(amount).expect("");
+            let new_balance = b.checked_add(amount).expect("failed at _upsert_deposit_record the `distributor` contract");
             self.deposit_records.insert(user, new_balance);
         }
 

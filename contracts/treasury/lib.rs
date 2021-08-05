@@ -6,12 +6,9 @@ use ink_lang as ink;
 mod treasury {
     use ink_env::call::FromAccountId;
     use ink_storage::{
-        collections::{
-            HashMap as StorageHashMap,
-        },
-        Lazy,
+        collections::HashMap,
+        lazy::Lazy,
     };
-    use ink_env::debug_println;
 
     use util::Util;
     use oracle::Oracle;
@@ -31,7 +28,7 @@ mod treasury {
         share: Lazy<Asset>,
         boardroom:  Lazy<Boardroom>,
 
-        status: StorageHashMap<(u32, AccountId), bool>,
+        status: HashMap<(u32, AccountId), bool>,
     }
 
     #[ink(event)]
@@ -93,7 +90,7 @@ mod treasury {
                 share: Lazy::new(share),
                 oracle: Lazy::new(oracle),
                 boardroom: Lazy::new(boardroom),
-                status: StorageHashMap::new(),
+                status: HashMap::new(),
             };
             instance
         }
@@ -106,22 +103,22 @@ mod treasury {
 
         fn _circulating_supply(&self) -> u128 {
             let cash_supply: u128 = self.cash.total_supply();
-            let r = cash_supply.checked_sub(self.accumulated_seigniorage).expect("");
+            let r = cash_supply.checked_sub(self.accumulated_seigniorage).expect("failed at _circulating_supply the `treasury` contract");
             return r;
         }
 
         fn _update_conversion_limit(&mut self, cash_price: u128) {
             let cash_price_one = self.util.get_one_unit_with_decimal();
-            let percentage = cash_price_one.checked_sub(cash_price).expect("");
+            let percentage = cash_price_one.checked_sub(cash_price).expect("failed at _update_conversion_limit the `treasury` contract");
 
-            let cap = self._circulating_supply().checked_mul(percentage).expect("");
+            let cap = self._circulating_supply().checked_mul(percentage).expect("failed at _update_conversion_limit the `treasury` contract");
 
             let decimal = self.util.get_decimal();
-            let b_cap = cap.checked_div(decimal.into()).expect("");
+            let b_cap = cap.checked_div(decimal.into()).expect("failed at _update_conversion_limit the `treasury` contract");
 
             let bond_supply: u128 = self.bond.total_supply();
 
-            self.bond_cap = b_cap.checked_sub(self.util.math_min(b_cap, bond_supply)).expect("");
+            self.bond_cap = b_cap.checked_sub(self.util.math_min(b_cap, bond_supply)).expect("failed at _update_conversion_limit the `treasury` contract");
         }
 
         fn _check_operator(&self) {
@@ -160,16 +157,16 @@ mod treasury {
 
             self._update_conversion_limit(cash_price);
 
-            let mul_value = self.bond_cap.checked_mul(cash_price).expect("");
+            let mul_value = self.bond_cap.checked_mul(cash_price).expect("failed at buyBonds the `treasury` contract");
 
             let one_unit_with_decimal = self.util.get_one_unit_with_decimal();
-            let div_value = mul_value.checked_div(one_unit_with_decimal).expect("");
+            let div_value = mul_value.checked_div(one_unit_with_decimal).expect("failed at buyBonds the `treasury` contract");
             let amount = self.util.math_min(amount, div_value);
 
             assert!(amount > 0, "Treasure: amount exceeds bond cap");
 
-            let mul_value = amount.checked_mul(one_unit_with_decimal).expect("");
-            let div_value = mul_value.checked_div(cash_price).expect("");
+            let mul_value = amount.checked_mul(one_unit_with_decimal).expect("failed at buyBonds the `treasury` contract");
+            let div_value = mul_value.checked_div(cash_price).expect("failed at buyBonds the `treasury` contract");
 
             let sender = Self::env().caller();
             let burn_ret:bool = self.cash.burn_from(sender, amount).is_ok();
@@ -197,7 +194,7 @@ mod treasury {
             let b: u128 = self._cash_balance_of_this();
             assert!(b >= amount, "Treasure: treasury has no more budget");
 
-            let sub_value = self.accumulated_seigniorage.checked_sub(self.util.math_min(self.accumulated_seigniorage, amount)).expect("");
+            let sub_value = self.accumulated_seigniorage.checked_sub(self.util.math_min(self.accumulated_seigniorage, amount)).expect("failed at redeemBonds the `treasury` contract");
             self.accumulated_seigniorage = sub_value;
 
             let sender = Self::env().caller();
@@ -225,9 +222,9 @@ mod treasury {
 
             // circulating supply
             let cash_price_one = self.util.get_one_unit_with_decimal();
-            let percentage:u128 = cash_price.checked_sub(cash_price_one).expect("");
-            let seigniorage_mul:u128 = self._circulating_supply().checked_mul(percentage).expect("");
-            let seigniorage:u128 = seigniorage_mul.checked_div(cash_price_one).expect("");
+            let percentage:u128 = cash_price.checked_sub(cash_price_one).expect("failed at allocateSeigniorage the `treasury` contract");
+            let seigniorage_mul:u128 = self._circulating_supply().checked_mul(percentage).expect("failed at allocateSeigniorage the `treasury` contract");
+            let seigniorage:u128 = seigniorage_mul.checked_div(cash_price_one).expect("failed at allocateSeigniorage the `treasury` contract");
 
             assert!(seigniorage > 0, "seigniorage should above 0");    
 
@@ -236,15 +233,15 @@ mod treasury {
             assert!(mint_ret, "Treasury: allocate_seigniorage mint err");
 
             let bond_total:u128 = self.bond.total_supply();
-            let bond_total_sub:u128 = bond_total.checked_sub(self.accumulated_seigniorage).expect("");
+            let bond_total_sub:u128 = bond_total.checked_sub(self.accumulated_seigniorage).expect("failed at allocateSeigniorage the `treasury` contract");
             let treasury_reserve_ori = self.util.math_min(seigniorage, bond_total_sub);
             let mut treasury_reserve: u128 = 0;
             if treasury_reserve_ori > 0 {
                 if treasury_reserve_ori == seigniorage {
-                    let treasury_reserve_mul:u128 = treasury_reserve_ori.checked_mul(80).expect("");
-                    treasury_reserve = treasury_reserve_mul.checked_div(100).expect("");
+                    let treasury_reserve_mul:u128 = treasury_reserve_ori.checked_mul(80).expect("failed at allocateSeigniorage the `treasury` contract");
+                    treasury_reserve = treasury_reserve_mul.checked_div(100).expect("failed at allocateSeigniorage the `treasury` contract");
                 }
-                self.accumulated_seigniorage = self.accumulated_seigniorage.checked_add(treasury_reserve).expect("");
+                self.accumulated_seigniorage = self.accumulated_seigniorage.checked_add(treasury_reserve).expect("failed at allocateSeigniorage the `treasury` contract");
                 self.env().emit_event(TreasuryFunded {
                     timestamp: Self::env().block_timestamp(),
                     seigniorage: treasury_reserve,
@@ -252,7 +249,7 @@ mod treasury {
             }
 
             // boardroom
-            let boardroom_reserve:u128 = seigniorage.checked_sub(treasury_reserve).expect("");
+            let boardroom_reserve:u128 = seigniorage.checked_sub(treasury_reserve).expect("failed at allocateSeigniorage the `treasury` contract");
             if boardroom_reserve > 0 {
                 let ret:bool = self.cash.approve(self.room_address, boardroom_reserve).is_ok();
                 assert!(ret, "Treasury: allocate_seigniorage approve err");
