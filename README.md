@@ -1,4 +1,6 @@
 # AlgoCash
+![image](https://user-images.githubusercontent.com/77781754/130481673-24772860-5ff0-4dda-978e-2880fc556769.png)
+
 Algo Cash specifically uses an algorithmic approach to manage the supply of tokens according to a predetermined logic. The algorithm is in charge of balancing stablecoin supply to fluctuating demand, ensuring that the token price remains relatively stable.
 
 
