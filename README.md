@@ -82,6 +82,10 @@ cargo install --force cargo-contract
 1: npx redspot run scripts/deploy.ts
 
 ### test
+```
+cargo install europa --git https://github.com/patractlabs/europa --locked --force
+europa --tmp
+```
 1: npx redspot test tests/distributor.test.ts   
 2: npx redspot test tests/boardroom.test.ts   
 3: npx redspot test tests/treasury.test.ts
